@@ -24,7 +24,8 @@ try {
   await panel.getByLabel('Venue',{exact:true}).fill('Example Wedding Venue');
   await panel.getByLabel('Address',{exact:true}).fill('Lahore, Punjab, Pakistan');
   await panel.getByRole('button',{name:'Choose pin on map'}).click();
-  await page.getByLabel('Jump to city').selectOption('Lahore');
+  await page.getByRole('tab',{name:'Pin picker',exact:true}).click();
+  await page.getByRole('button',{name:'Bahria Town Lahore',exact:true}).click();
   await page.waitForFunction(()=>[...document.querySelectorAll('.leaflet-tile-loaded')].filter(img=>img.naturalWidth>0).length>=4,{},{timeout:30000});
   await page.locator('.pin-map').click({position:{x:340,y:170}});
   await page.locator('.venue-pin').waitFor();

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual, createHash, randomUUID } from 'node:crypto';
 import { defaultSettings, EVENT_IDS } from './defaults.mjs';
+import { resolveMapPin } from './resolve-map-pin.mjs';
 
 const COOKIE = 'wajid_session';
 const MAX_AGE = 60 * 60 * 8;
@@ -102,6 +103,7 @@ export function createApi({ store, password, username = 'ma9440863', development
       }
       if (!path.startsWith('/admin')) throw new HttpError(404, 'Not found.');
       if (!password || !authenticated(request, sessionSecret)) throw new HttpError(401, 'Please sign in to manage invitations.');
+      if(path==='/admin/map-pin' && method==='POST')return json({location:await resolveMapPin(body?.value)});
       if (path === '/admin' && method === 'GET') {
         const guests = await Promise.all((await store.guests()).map(async guest => ({ ...guest, rsvp: await store.get(`rsvps/${guest.id}`) })));
         return json({ settings, guests: guests.sort((a,b) => a.name.localeCompare(b.name)), development });

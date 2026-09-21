@@ -78,7 +78,29 @@ try {
   await page.locator('.event-settings-grid .settings-panel').first().getByLabel('Venue', { exact:true }).fill('Royal Marquee');
   await page.locator('.event-settings-grid .settings-panel').first().getByLabel('Address', {exact:true}).fill('Garden Road, Lahore, Pakistan');
   await page.getByRole('button',{name:'Choose pin on map'}).first().click();
-  await page.getByLabel('Jump to city').selectOption('Lahore');
+  await page.getByRole('button',{name:'Bahria Town Lahore',exact:true}).click();
+  await page.getByRole('textbox',{name:'Search Google landmarks'}).fill('Life Line Med Mart');
+  await page.getByRole('button',{name:'Search',exact:true}).click();
+  assert.match(new URL(await page.locator('iframe[title="Google Maps landmarks and venue preview"]').getAttribute('src')).searchParams.get('q'),/Life Line Med Mart, Bahria Town Lahore/);
+  await page.getByLabel('Google Maps link or coordinates',{exact:true}).fill('https://www.google.com/maps/place/Venue/@30,70,15z/data=!3d31.38136!4d74.18635');
+  await page.getByRole('button',{name:'Preview this pin'}).click();
+  await page.getByText('31.381360, 74.186350',{exact:true}).waitFor();
+  assert.equal(new URL(await page.locator('iframe[title="Google Maps landmarks and venue preview"]').getAttribute('src')).searchParams.get('q'),'31.38136,74.18635');
+  await page.locator('.map-picker-dialog').screenshot({path:'test-results/google-landmarks-desktop.png'});
+  await page.setViewportSize({width:375,height:812});
+  await page.locator('.map-picker-dialog').evaluate(el=>{el.scrollTop=0;});
+  await page.locator('.map-picker-dialog').screenshot({path:'test-results/google-landmarks-mobile.png'});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.setViewportSize({width:1440,height:1000});
+  await page.getByRole('tab',{name:'Pin picker',exact:true}).click();
+  for(const [area,south,north,west,east] of [['Bahria Town Lahore',31.35,31.41,74.16,74.22],['Manga Mandi',31.28,31.32,74.05,74.09],['Raiwind',31.23,31.27,74.19,74.23]]){
+    await page.getByRole('button',{name:area,exact:true}).click();
+    assert(await page.getByRole('button',{name:'Use this pin',exact:true}).isDisabled());
+    await page.getByRole('button',{name:'Place pin at map center'}).click();
+    const [lat,lng]=(await page.locator('.pin-position [role=status]').textContent()).split(',').map(Number);
+    assert(lat>south&&lat<north&&lng>west&&lng<east,`Map center must be in ${area}`);
+  }
+  await page.getByRole('button',{name:'Bahria Town Lahore',exact:true}).click();
   await page.locator('.pin-map').click({position:{x:180,y:180}});
   await page.getByRole('button',{name:'Use this pin'}).click();
   await page.locator('.pin-saved').first().waitFor();

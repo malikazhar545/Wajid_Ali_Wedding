@@ -9,7 +9,7 @@ A burgundy-and-ivory floral wedding invitation with a private organizer dashboar
 3. Tick **Mehndi**, **Baraat**, **Walima**, or all three. Choose **With family** or **Without family**, then click **Create invitation**.
 4. Click **Copy link** beside the guest and share it, or share the homepage so guests can select their name.
 5. Open **Dates & venues**. Pick each date from the calendar, enter its Pakistan time, venue and full address.
-6. Click **Choose pin on map**, jump to a nearby city, zoom in and click the exact venue entrance. Drag the pin to adjust it, then click **Use this pin** and **Save all details**. Guests see your address, a Google Map, directions and a share-location button.
+6. Click **Choose pin on map**. Select **Bahria Town Lahore**, **Manga Mandi** or **Raiwind**. The **Google Maps & landmarks** view lets you search a nearby shop, such as Life Line Med Mart. Open Google Maps, choose the exact entrance, then paste its location link or coordinates and click **Preview this pin**. Check the preview, click **Use this pin**, then **Save all details**. Alternatively, switch to **Pin picker** to click and drag an exact pin directly. Previously saved pins reopen at their exact location. Changing areas prepares a new draft pin; **Cancel** keeps your saved location. Guests see your address, a Google Map, directions and a share-location button.
 
 No JSON editing is needed. Dates can remain empty until confirmed. Guests see only their selected functions. Open cards refresh every 30 seconds and when their browser window regains focus; venue changes update the same way.
 
@@ -17,7 +17,7 @@ Guests can RSVP in English with **Joyfully accepts** or **Regretfully declines**
 
 **Contact family on WhatsApp** opens a chat to `+92 317 4539300` with an editable greeting. The guest chooses whether to send it. RSVP is saved directly to the backend and does not send a WhatsApp message.
 
-The saved pin takes priority over address searches and pasted map links, so directions lead to the exact coordinates you choose. **Use my location** is optional and asks your browser for permission only when clicked. The organizer's pin picker uses OpenStreetMap; guest maps, directions and shared links use Google Maps. No map API key is required. Internet access is needed for map tiles and embedded maps. The interactive picker supports keyboard panning and **Place pin at map center**.
+The saved pin takes priority over address searches and pasted map links, so directions lead to the exact coordinates you choose. **Use my location** is optional and asks your browser for permission only when clicked. Google landmark search and previews use embedded Google Maps; the direct click-and-drag **Pin picker** uses OpenStreetMap. No map API key is required. An embedded Google map cannot pass its clicked location back to this website, so use link/coordinate import to transfer a Google pin. Compatible Google short links are resolved on the authenticated backend; if a link does not contain precise coordinates, the picker asks for coordinates instead. Camera-only map URLs are never treated as exact venue pins. Internet access is needed for map tiles and embedded maps. The interactive picker supports keyboard panning and **Place pin at map center**.
 
 Map references: [Leaflet interaction API](https://leafletjs.com/reference), [OpenStreetMap tile usage](https://operations.osmfoundation.org/policies/tiles/), [Google Maps links](https://developers.google.com/maps/documentation/urls/get-started).
 

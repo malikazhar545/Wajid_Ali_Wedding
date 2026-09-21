@@ -2,20 +2,27 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapPin, LocateFixed, X, Check } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import GoogleLocationSearch from './GoogleLocationSearch.jsx';
 
-const cities = {
-  'Choose a nearby city': [30.3753,69.3451,5],
-  Islamabad: [33.6844,73.0479,12], Rawalpindi:[33.5651,73.0169,12],
-  Lahore:[31.5204,74.3587,12], Karachi:[24.8607,67.0011,12],
-  Faisalabad:[31.4504,73.135,12], Multan:[30.1575,71.5249,12],
-  Peshawar:[34.0151,71.5249,12], Quetta:[30.1798,66.975,12],
+// Area centers guide the map only; the organizer still selects the exact entrance.
+// Sources: https://mapcarta.com/N303543852, https://mapcarta.com/15006890,
+// https://www.latlong.net/place/raiwind-lahore-punjab-pakistan-8336.html
+const areas = {
+  'Bahria Town Lahore': [31.38136,74.18635,14],
+  'Manga Mandi': [31.29913,74.06948,14],
+  Raiwind: [31.245659,74.212891,14],
 };
+const areaBounds = Object.values(areas).map(([lat,lng])=>[lat,lng]);
 
 export default function PinPicker({ event, onChange }) {
   const [open,setOpen] = useState(false);
   const [draft,setDraft] = useState(event.location || null);
   const [error,setError] = useState('');
   const [locating,setLocating] = useState(false);
+  const [activeArea,setActiveArea] = useState('');
+  const [view,setView] = useState('google');
+  const [googleQuery,setGoogleQuery] = useState('Bahria Town Lahore');
+  const [tileError,setTileError] = useState('');
   const dialog = useRef(null), mapElement = useRef(null), map = useRef(null), marker = useRef(null);
   const putPin = useRef(null);
   useEffect(() => {
@@ -23,19 +30,22 @@ export default function PinPicker({ event, onChange }) {
     const modal = dialog.current;
     modal.showModal();
     const initial = event.location;
-    const instance = L.map(mapElement.current, { scrollWheelZoom:false }).setView(initial ? [initial.lat,initial.lng] : cities['Choose a nearby city'].slice(0,2), initial ? 17 : 5);
+    const instance = L.map(mapElement.current, { scrollWheelZoom:false });
+    if(initial)instance.setView([initial.lat,initial.lng],17);
+    else instance.fitBounds(areaBounds,{padding:[35,35],animate:false});
     map.current = instance;
     const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
       referrerPolicy:'strict-origin-when-cross-origin',
     }).addTo(instance);
-    tiles.on('tileerror',()=>setError('Map tiles could not load. Check your connection, or try again.'));
-    tiles.on('load',()=>setError(''));
+    tiles.on('tileerror',()=>setTileError('Map tiles could not load. Check your connection, or try again.'));
+    tiles.on('load',()=>setTileError(''));
     const icon = L.divIcon({className:'venue-pin',html:'<span aria-hidden="true"></span>',iconSize:[32,42],iconAnchor:[16,40]});
     const selectPin = latlng => {
       const point = L.latLng(latlng).wrap();
       const next = {lat:Number(point.lat.toFixed(6)),lng:Number(point.lng.toFixed(6))};
       setDraft(next);
+      setGoogleQuery(`${next.lat},${next.lng}`);
       if (!marker.current) {
         marker.current = L.marker(point,{icon,draggable:true,title:'Venue pin — drag to adjust',keyboard:true}).addTo(instance);
         marker.current.on('dragend',()=>selectPin(marker.current.getLatLng()));
@@ -49,8 +59,21 @@ export default function PinPicker({ event, onChange }) {
     instance.invalidateSize();
     return () => { observer.disconnect(); instance.remove(); map.current=null; marker.current=null; putPin.current=null; modal.close(); };
   },[open]);
+  useEffect(()=>{
+    if(open&&view==='pin'&&map.current){
+      map.current.invalidateSize();
+      if(!draft&&!activeArea)map.current.fitBounds(areaBounds,{padding:[35,35],animate:false});
+    }
+  },[open,view]);
 
-  const begin = () => {setDraft(event.location || null);setError('');setOpen(true);};
+  const begin = () => {setDraft(event.location || null);setActiveArea('');setView('google');setGoogleQuery(event.location?`${event.location.lat},${event.location.lng}`:[event.venue,event.address].filter(Boolean).join(', ')||'Bahria Town Lahore');setError('');setTileError('');setOpen(true);};
+  const jumpArea = area => {
+    const [lat,lng,zoom]=areas[area];
+    map.current?.setView([lat,lng],zoom,{animate:false});
+    marker.current?.remove();marker.current=null;
+    setDraft(null);setActiveArea(area);
+    setGoogleQuery(`${area}, Lahore, Pakistan`);
+  };
   const locate = () => {
     if(!navigator.geolocation){setError('Location is unavailable in this browser. Select the pin on the map.');return;}
     setLocating(true);setError('');
@@ -58,8 +81,8 @@ export default function PinPicker({ event, onChange }) {
       setLocating(false);
       if(!map.current)return;
       const point=L.latLng(position.coords.latitude,position.coords.longitude);
-      map.current.setView(point,17);putPin.current(point);
-    },()=>{setLocating(false);setError('Your location could not be accessed. Choose a city, then place the pin on the map.');},{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+      setActiveArea('');map.current.setView(point,17);putPin.current(point);
+    },()=>{setLocating(false);setError('Your location could not be accessed. Choose an area below, then place the pin on the map.');},{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
   };
   return <div className="pin-picker">
     <div className="pin-picker-heading"><MapPin size={17} aria-hidden="true"/><span>Exact venue pin<small>{event.location?'A precise location is selected.':'Choose the exact entrance for your guests.'}</small></span></div>
@@ -67,11 +90,14 @@ export default function PinPicker({ event, onChange }) {
     {event.location && <p className="pin-saved"><Check size={13} aria-hidden="true"/> Exact pin selected for Google Maps</p>}
     {open && <dialog className="map-picker-dialog" ref={dialog} aria-labelledby={'pin-title-'+event.id} onCancel={()=>setOpen(false)}>
       <div className="map-picker-heading"><div><p className="eyebrow">{event.name.toUpperCase()} VENUE</p><h2 id={'pin-title-'+event.id}>Choose the exact spot.</h2></div><button type="button" className="icon-button" aria-label="Close location picker" onClick={()=>setOpen(false)}><X size={20}/></button></div>
-      <p className="picker-help">Zoom in, click your venue, then drag the pin to its entrance.</p>
-      <div className="map-picker-toolbar"><select aria-label="Jump to city" defaultValue="Choose a nearby city" onChange={e=>{const [lat,lng,zoom]=cities[e.target.value];map.current?.setView([lat,lng],zoom);}}>{Object.keys(cities).map(city=><option key={city}>{city}</option>)}</select><button type="button" className="secondary-button" disabled={locating} onClick={locate}><LocateFixed size={15}/>{locating?'Locating…':'Use my location'}</button></div>
-      <div className="pin-map" ref={mapElement} role="region" aria-label="Choose the venue location on the map"/>
+      <p className="picker-help">Choose your area. Find landmarks on Google Maps, or place a pin directly with the pin picker.</p>
+      <div className="map-area-shortcuts" role="group" aria-label="Choose a nearby area">{Object.keys(areas).map(area=><button type="button" key={area} aria-pressed={activeArea===area} onClick={()=>jumpArea(area)}>{area}</button>)}</div>
+      <div className="map-picker-toolbar"><button type="button" className="text-button" onClick={()=>{setActiveArea('');setView('pin');map.current?.fitBounds(areaBounds,{padding:[35,35],animate:false});}}>Show all three areas</button><button type="button" className="secondary-button" disabled={locating} onClick={locate}><LocateFixed size={15}/>{locating?'Locating…':'Use my location'}</button></div>
+      <div className="map-view-tabs" role="tablist" aria-label="Map view"><button type="button" role="tab" id={`google-tab-${event.id}`} aria-controls={`google-panel-${event.id}`} aria-selected={view==='google'} onClick={()=>setView('google')}>Google Maps & landmarks</button><button type="button" role="tab" id={`pin-tab-${event.id}`} aria-controls={`pin-panel-${event.id}`} aria-selected={view==='pin'} onClick={()=>setView('pin')}>Pin picker</button></div>
+      <div role="tabpanel" id={`google-panel-${event.id}`} aria-labelledby={`google-tab-${event.id}`} hidden={view!=='google'}><GoogleLocationSearch query={googleQuery} area={activeArea} onSearch={setGoogleQuery} onPin={point=>{putPin.current?.(point);map.current?.setView([point.lat,point.lng],17,{animate:false});}}/></div>
+      <div role="tabpanel" id={`pin-panel-${event.id}`} aria-labelledby={`pin-tab-${event.id}`} hidden={view!=='pin'}><p className="picker-help">Tap the exact spot, then drag the pin to adjust. This pin picker uses OpenStreetMap.</p><div className="pin-map" ref={mapElement} role="region" aria-label="Choose the venue location on the map"/>{tileError&&<p className="map-picker-error" role="alert">{tileError}</p>}</div>
       {error && <p className="map-picker-error" role="alert">{error}</p>}
-      <div className="pin-position"><span role="status">{draft?draft.lat.toFixed(6)+', '+draft.lng.toFixed(6):'No pin selected yet'}</span><button type="button" className="text-button" onClick={()=>putPin.current?.(map.current.getCenter())}>Place pin at map center</button></div>
+      <div className="pin-position"><span role="status">{draft?draft.lat.toFixed(6)+', '+draft.lng.toFixed(6):'No pin selected yet'}</span>{view==='pin'&&<button type="button" className="text-button" onClick={()=>putPin.current?.(map.current.getCenter())}>Place pin at map center</button>}</div>
       <div className="map-picker-footer"><button type="button" className="secondary-button" onClick={()=>setOpen(false)}>Cancel</button><button type="button" className="primary-button" disabled={!draft} onClick={()=>{onChange(draft);setOpen(false);}}><Check size={17}/> Use this pin</button></div>
     </dialog>}
   </div>;

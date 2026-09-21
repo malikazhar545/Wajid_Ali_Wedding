@@ -14,6 +14,17 @@ function fixture(options = {}) {
 }
 const guest = { name: 'Ahmed Ali', label: 'Lahore', events: ['baraat'], withFamily: true };
 
+test('Google pin import requires organizer login and never saves a venue by itself',async()=>{
+  const f=fixture();
+  assert.equal((await f.request('/admin/map-pin','POST',{value:'31.38136,74.18635'})).status,401);
+  await f.login();
+  const response=await f.request('/admin/map-pin','POST',{value:'31.38136,74.18635'});
+  assert.equal(response.status,200);assert.deepEqual((await response.json()).location,{lat:31.38136,lng:74.18635});
+  assert.equal(f.records.has('settings'),false);
+  assert.equal((await f.request('/admin/map-pin','POST',{value:'https://example.com/location'})).status,400);
+  assert.equal((await f.request('/admin/map-pin','POST',{value:'31.3,74.2'},{origin:'https://example.com'})).status,403);
+});
+
 test('guest RSVP persists, updates, appears in admin and survives organizer edits',async()=>{
   const f=fixture();await f.login();
   const g=await (await f.request('/admin/guests','POST',guest)).json();
