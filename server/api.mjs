@@ -84,16 +84,28 @@ export function createApi({ store, password, username = 'ma9440863', development
         const { events, ...publicSettings } = settings;
         return json({ settings: publicSettings, development, guests: guests.map(({ id, name, label }) => ({ id, name, label })).sort((a, b) => a.name.localeCompare(b.name)) });
       }
+      const rsvpMatch = path.match(/^\/invitation\/([a-zA-Z0-9-]{1,80})\/rsvp$/);
+      if (rsvpMatch && method === 'PUT') {
+        const id = rsvpMatch[1];
+        if (!await store.get(`guests/${id}`)) throw new HttpError(404, 'This invitation is no longer available. Please contact the family.');
+        if (!body || !['accepted', 'declined'].includes(body.status)) throw new HttpError(400, 'Please choose whether you will attend.');
+        const rsvp = { status: body.status, updatedAt: new Date().toISOString() };
+        await store.set(`rsvps/${id}`, rsvp);
+        return json({ rsvp });
+      }
       if (path.startsWith('/invitation/') && method === 'GET') {
         const id = path.slice('/invitation/'.length);
         if (!/^[a-zA-Z0-9-]{1,80}$/.test(id)) throw new HttpError(404, 'Invitation not found.');
         const guest = await store.get(`guests/${id}`);
         if (!guest) throw new HttpError(404, 'This invitation is no longer available. Please contact the family.');
-        return json({ guest, settings: { ...settings, events: settings.events.filter(event => guest.events.includes(event.id)) } });
+        return json({ guest: { ...guest, rsvp: await store.get(`rsvps/${id}`) }, settings: { ...settings, events: settings.events.filter(event => guest.events.includes(event.id)) } });
       }
       if (!path.startsWith('/admin')) throw new HttpError(404, 'Not found.');
       if (!password || !authenticated(request, sessionSecret)) throw new HttpError(401, 'Please sign in to manage invitations.');
-      if (path === '/admin' && method === 'GET') return json({ settings, guests: (await store.guests()).sort((a,b) => a.name.localeCompare(b.name)), development });
+      if (path === '/admin' && method === 'GET') {
+        const guests = await Promise.all((await store.guests()).map(async guest => ({ ...guest, rsvp: await store.get(`rsvps/${guest.id}`) })));
+        return json({ settings, guests: guests.sort((a,b) => a.name.localeCompare(b.name)), development });
+      }
       if (path === '/admin/settings' && method === 'PUT') {
         const updated = validateSettings(body);
         await store.set('settings', updated);
@@ -108,10 +120,10 @@ export function createApi({ store, password, username = 'ma9440863', development
       if (match && ['PUT', 'DELETE'].includes(method)) {
         const key = `guests/${match[1]}`;
         if (!await store.get(key)) throw new HttpError(404, 'Guest not found.');
-        if (method === 'DELETE') { await store.delete(key); return json({ ok: true }); }
+        if (method === 'DELETE') { await store.delete(key); await store.delete(`rsvps/${match[1]}`); return json({ ok: true }); }
         const guest = { ...validateGuest(body), id: match[1] };
         await store.set(key, guest);
-        return json(guest);
+        return json({ ...guest, rsvp: await store.get(`rsvps/${match[1]}`) });
       }
       throw new HttpError(404, 'Not found.');
     } catch (error) {

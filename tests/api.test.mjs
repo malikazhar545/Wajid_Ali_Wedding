@@ -14,6 +14,48 @@ function fixture(options = {}) {
 }
 const guest = { name: 'Ahmed Ali', label: 'Lahore', events: ['baraat'], withFamily: true };
 
+test('guest RSVP persists, updates, appears in admin and survives organizer edits',async()=>{
+  const f=fixture();await f.login();
+  const g=await (await f.request('/admin/guests','POST',guest)).json();
+  const other=await (await f.request('/admin/guests','POST',{...guest,name:'Other guest'})).json();
+  f.setCookie('');
+  let card=await (await f.request(`/invitation/${g.id}`)).json();
+  assert.equal(card.guest.rsvp,null);
+  const accepted=await f.request(`/invitation/${g.id}/rsvp`,'PUT',{status:'accepted',events:['walima'],name:'Changed name'});
+  assert.equal(accepted.status,200);
+  const {rsvp}=await accepted.json();
+  assert.equal(rsvp.status,'accepted');assert(Number.isFinite(Date.parse(rsvp.updatedAt)));
+  card=await (await f.request(`/invitation/${g.id}`)).json();
+  assert.deepEqual(card.guest.rsvp,rsvp);assert.equal(card.guest.name,guest.name);assert.deepEqual(card.guest.events,['baraat']);
+  assert.equal((await (await f.request(`/invitation/${other.id}`)).json()).guest.rsvp,null);
+  const directory=await (await f.request('/public')).json();
+  assert(directory.guests.every(item=>!('rsvp' in item)));
+  await f.login();
+  const admin=await (await f.request('/admin')).json();
+  assert.deepEqual(admin.guests.find(item=>item.id===g.id).rsvp,rsvp);
+  const edit=await (await f.request(`/admin/guests/${g.id}`,'PUT',{...guest,name:'Updated guest',events:['mehndi'],rsvp:{status:'declined'}})).json();
+  assert.deepEqual(edit.rsvp,rsvp);
+  f.setCookie('');
+  assert.equal((await f.request(`/invitation/${g.id}/rsvp`,'PUT',{status:'declined'})).status,200);
+  card=await (await f.request(`/invitation/${g.id}`)).json();
+  assert.equal(card.guest.rsvp.status,'declined');assert.equal(card.guest.name,'Updated guest');assert.deepEqual(card.guest.events,['mehndi']);
+  await f.login();await f.request(`/admin/guests/${g.id}`,'DELETE');
+  assert.equal(f.records.has(`rsvps/${g.id}`),false);
+  assert.equal((await f.request(`/invitation/${g.id}/rsvp`,'PUT',{status:'accepted'})).status,404);
+});
+
+test('RSVP rejects invalid replies and cross-origin writes without changing the saved reply',async()=>{
+  const f=fixture();f.records.set('guests/test',{...guest,id:'test'});
+  await f.request('/invitation/test/rsvp','PUT',{status:'accepted'});
+  for(const body of [null,{}, {status:'pending'}, {status:true},{status:['accepted']}]) {
+    assert.equal((await f.request('/invitation/test/rsvp','PUT',body)).status,400);
+  }
+  assert.equal((await f.request('/invitation/test/rsvp','PUT',{status:'declined'},{origin:'https://other.example'})).status,403);
+  assert.equal((await f.request('/invitation/missing/rsvp','PUT',{status:'accepted'})).status,404);
+  assert.equal(f.records.get('rsvps/test').status,'accepted');
+  assert.equal((await f.request('/admin')).status,401);
+});
+
 test('redesign preserves saved wedding dates, venues, custom wording and guest records',async()=>{
   const f=fixture();
   const saved=structuredClone(defaultSettings);

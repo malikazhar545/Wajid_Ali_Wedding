@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ArrowLeft, ArrowDown, Search, X, Heart, Flower2, Sparkles, Users, CalendarDays, Clock3, MapPin, Share2, Printer, Check, LockKeyhole } from 'lucide-react';
 import VenueMap from './VenueMap.jsx';
+import Rsvp from './Rsvp.jsx';
 import { confirmedDate, clockTime } from './date-time.mjs';
 import './wedding.css';
 
@@ -122,6 +123,7 @@ function Invitation({id,back}) {
     {!data ? <div className="w-loading">{error?'Please contact the family for your invitation.':'Opening your invitation…'}</div> : <>
       <section className="w-invitation-cover" id="find-invitation"><div className="w-folio"><Florals/><div className="w-folio-inner"><p className="w-bismillah" lang="ar" dir="rtl">{BISMILLAH}</p><span className="w-kicker">WITH THE BLESSINGS OF ALLAH</span><Mark/><p className="w-overline">YOU ARE CORDIALLY INVITED TO THE WEDDING OF</p><h1>{displayName(data.settings.groom)}</h1><Flourish/><p className="w-invitation-message">{data.settings.message}</p><div className="w-addressed"><p className="w-overline">A WARM INVITATION FOR</p><h2 ref={heading} tabIndex={-1}>{data.guest.name}</h2>{data.guest.withFamily&&<span className="family-badge"><Users size={14}/> Together with your family</span>}<p>We would be delighted to welcome you to<br/><strong>{data.settings.events.map(event=>event.name).join(', ').replace(/, ([^,]*)$/,' & $1')}</strong>.</p></div><span className="w-folio-host">{data.settings.host}</span></div></div></section>
       <div className="w-itinerary-wrap"><Countdown events={data.settings.events}/><section className="w-itinerary" aria-labelledby="itinerary-heading"><div className="w-itinerary-heading"><span className="w-overline">YOUR PRESENCE MAKES IT SPECIAL</span><h2 id="itinerary-heading">The celebrations <em>await.</em></h2><p>A date to remember. A place reserved for you.</p><nav aria-label="Jump to your function">{data.settings.events.map(event=><a key={event.id} href={`#occasion-${event.id}`}>{event.name}<ArrowDown size={12}/></a>)}</nav></div><div className="w-events-list">{data.settings.events.map((event,index)=><EventCard key={event.id} event={event} groom={displayName(data.settings.groom)} index={index}/>)}</div>{data.settings.events.some(event=>!confirmedDate(event.date))&&<p className="w-pending-dates">Final dates will appear here as soon as the family confirms them.</p>}</section></div>
+      <Rsvp guest={data.guest} onSaved={rsvp=>setData(current=>({...current,guest:{...current.guest,rsvp}}))}/>
       <section className="w-invitation-closing"><Flourish/><p>{data.settings.closing}</p><span>{data.settings.host}</span><div className="w-guest-actions"><button className="w-share-button" onClick={share}><Share2 size={17}/> Share invitation</button><button className="w-print-button" onClick={()=>window.print()}><Printer size={17}/> Print card</button></div>{shareStatus&&<p className="w-share-status" role="status"><Check size={13}/>{shareStatus}</p>}</section>
     </>}
   </main><Footer groom={data?.settings.groom}/></div>;

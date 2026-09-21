@@ -13,6 +13,10 @@ A burgundy-and-ivory floral wedding invitation with a private organizer dashboar
 
 No JSON editing is needed. Dates can remain empty until confirmed. Guests see only their selected functions. Open cards refresh every 30 seconds and when their browser window regains focus; venue changes update the same way.
 
+Guests can RSVP in English with **Joyfully accepts** or **Regretfully declines**, then click **Send RSVP**. They can revisit the same invitation and update their reply. A reply covers the named guest/family and the functions on that invitation; it is not a headcount. The dashboard shows **Accepted**, **Declined**, or **Awaiting reply**, the response time in Pakistan time, totals and an RSVP filter. The guest list refreshes replies every 30 seconds and on window focus while no guest is being edited. Editing a guest or changing wedding details preserves their reply.
+
+**Contact family on WhatsApp** opens a chat to `+92 317 4539300` with an editable greeting. The guest chooses whether to send it. RSVP is saved directly to the backend and does not send a WhatsApp message.
+
 The saved pin takes priority over address searches and pasted map links, so directions lead to the exact coordinates you choose. **Use my location** is optional and asks your browser for permission only when clicked. The organizer's pin picker uses OpenStreetMap; guest maps, directions and shared links use Google Maps. No map API key is required. Internet access is needed for map tiles and embedded maps. The interactive picker supports keyboard panning and **Place pin at map center**.
 
 Map references: [Leaflet interaction API](https://leafletjs.com/reference), [OpenStreetMap tile usage](https://operations.osmfoundation.org/policies/tiles/), [Google Maps links](https://developers.google.com/maps/documentation/urls/get-started).
@@ -52,7 +56,7 @@ Invalid hand-edited dates appear unconfirmed until the organizer chooses a valid
 
 The name-selection screen exposes guest names and optional labels. Selecting a name is not identity verification; anyone with the link can open a listed invitation. Do not put private contact details in public labels. The app does not send messages automatically.
 
-Writes require a signed HttpOnly session and server validation. Sessions last eight hours; changing either credential invalidates existing sessions. The Netlify API is rate limited. Simultaneous edits use the last saved version. There are no trackers or analytics.
+Organizer changes require a signed HttpOnly session and server validation. Guests can submit only an accepted/declined RSVP using their invitation link; their replies are excluded from the public name directory. Sessions last eight hours; changing either credential invalidates existing sessions. The Netlify API is rate limited. Simultaneous edits use the last saved version. There are no trackers or analytics.
 
 ## Verification
 
