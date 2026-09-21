@@ -1,0 +1,47 @@
+import { chromium } from '@playwright/test';
+import { mkdir, mkdtemp } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { createServer } from 'vite';
+import assert from 'node:assert/strict';
+
+await mkdir('test-results',{recursive:true});
+process.env.WEDDING_DATA_DIR=await mkdtemp(resolve('test-results/maps-'));
+process.env.ADMIN_USERNAME='map-tester';
+process.env.ADMIN_PASSWORD='map-test-password';
+const server=await createServer({server:{host:'127.0.0.1',port:5175,strictPort:true}});
+await server.listen();
+const browser=await chromium.launch({channel:'chrome',headless:true});
+try {
+  const page=await browser.newPage({viewport:{width:1440,height:1050},reducedMotion:'reduce'});
+  const tileResponses=[];
+  page.on('response',response=>{if(response.url().includes('tile.openstreetmap.org'))tileResponses.push(response.status());});
+  await page.goto('http://127.0.0.1:5175/backend');
+  await page.getByLabel('Username',{exact:true}).fill('map-tester');
+  await page.getByLabel('Password',{exact:true}).fill('map-test-password');
+  await page.getByRole('button',{name:'Enter family dashboard'}).click();
+  await page.getByRole('tab',{name:'Dates & venues'}).click();
+  const panel=page.locator('.event-settings-grid .settings-panel').first();
+  await panel.getByLabel('Venue',{exact:true}).fill('Example Wedding Venue');
+  await panel.getByLabel('Address',{exact:true}).fill('Lahore, Punjab, Pakistan');
+  await panel.getByRole('button',{name:'Choose pin on map'}).click();
+  await page.getByLabel('Jump to city').selectOption('Lahore');
+  await page.waitForFunction(()=>[...document.querySelectorAll('.leaflet-tile-loaded')].filter(img=>img.naturalWidth>0).length>=4,{},{timeout:30000});
+  await page.locator('.pin-map').click({position:{x:340,y:170}});
+  await page.locator('.venue-pin').waitFor();
+  await page.locator('.map-picker-dialog').screenshot({path:'test-results/pin-picker-desktop.png'});
+  await page.setViewportSize({width:375,height:812});
+  await page.locator('.map-picker-dialog').screenshot({path:'test-results/pin-picker-mobile.png'});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.getByRole('button',{name:'Use this pin'}).click();
+  await page.getByRole('button',{name:'Save all details'}).click();
+  await page.waitForFunction(()=>document.querySelector('.settings-bottom button').disabled);
+  await page.goto('http://127.0.0.1:5175/?invite=demo-ahmed',{waitUntil:'domcontentloaded'});
+  const iframe=page.locator('iframe[title="Mehndi venue map"]');
+  await iframe.scrollIntoViewIfNeeded();
+  const frame=await iframe.elementHandle().then(element=>element.contentFrame());
+  await frame.waitForSelector('body',{timeout:30000});
+  await frame.waitForFunction(()=>document.querySelectorAll('canvas').length>0 || document.querySelectorAll('img').length>2,{},{timeout:30000});
+  await page.locator('.event-mehndi').screenshot({path:'test-results/guest-google-map.png'});
+  assert(tileResponses.some(status=>status===200));
+  console.log('PASS: live OpenStreetMap tiles, interactive pin, mobile picker, saved coordinates and live Google embedded map.');
+} finally {await browser.close();await server.close();}
