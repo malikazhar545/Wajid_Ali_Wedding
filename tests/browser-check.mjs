@@ -1,6 +1,6 @@
 import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createServer } from 'vite';
 
@@ -21,6 +21,12 @@ try {
   await page.goto(base);
   await page.getByRole('button', { name: 'Ahmed Ali' }).waitFor();
   await page.evaluate(() => document.fonts.ready);
+  await page.getByRole('heading', {name:'Wajid Ali',exact:true}).waitFor();
+  assert.match(await page.locator('.w-bismillah').textContent(), /بِسْمِ/);
+  await page.getByRole('button', {name:'Walima 03'}).click();
+  assert.equal(await page.getByRole('button', {name:'Walima 03'}).getAttribute('aria-pressed'),'true');
+  await page.getByRole('heading', {name:'Together, with grateful hearts.'}).waitFor();
+  await page.getByRole('button', {name:'Mehndi 01'}).click();
   await page.screenshot({ path: 'test-results/home-desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Usman Khan' }).click();
   await page.getByRole('heading', { name: 'Usman Khan' }).waitFor();
@@ -32,6 +38,12 @@ try {
   await page.getByRole('heading', { name: 'Ahmed Ali' }).waitFor();
   assert.equal(await page.locator('.event-card').count(), 3);
   assert.equal(await page.locator('.family-badge').count(), 1);
+  const calendarPromise=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Add to calendar'}).first().click();
+  const calendar=await calendarPromise;
+  const calendarText=await readFile(await calendar.path(),'utf8');
+  assert.match(calendarText,/DTSTART:20261217T140000Z/);
+  assert.match(calendarText,/SUMMARY:Wajid Ali/);
   await page.screenshot({ path: 'test-results/invitation-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 375, height: 812 });
   await page.screenshot({ path: 'test-results/invitation-mobile.png', fullPage: true });
@@ -97,9 +109,12 @@ try {
   await page.getByRole('button', { name:'Save all details' }).click();
   await page.waitForFunction(() => document.querySelector('.settings-bottom button').disabled);
   await invitationPage.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await invitationPage.getByText('18 December 2026', { exact:true }).waitFor();
+  await invitationPage.locator('.event-mehndi').getByText('18 December 2026', { exact:true }).waitFor();
   await invitationPage.waitForFunction(()=>document.querySelector('.event-mehndi .venue')?.textContent.includes('Rose Banquet'));
-  await page.getByRole('tab', { name: 'Guest list' }).click();
+  await page.bringToFront();
+  await page.getByRole('tab', { name: 'Guest list' }).focus();
+  await page.getByRole('tab', { name: 'Guest list' }).press('Enter');
+  await page.locator('#guests-panel:not([hidden])').waitFor();
   await page.getByRole('button', { name: 'Edit QA Wedding Guest' }).click();
   await page.getByLabel('Mehndi', { exact: true }).uncheck();
   await page.getByLabel('Baraat', { exact: true }).uncheck();
@@ -142,6 +157,10 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log('PASS: /backend login, guest CRUD, family options, dates, venue/address, map pin, Google directions, share location, open-card refresh, responsive layouts, envelope animation, logout.');
+} catch(error) {
+  await page.screenshot({path:'test-results/browser-failure.png',fullPage:true});
+  await writeFile('test-results/browser-failure.txt',await page.locator('body').innerText());
+  throw error;
 } finally {
   await browser.close();
   await server.close();

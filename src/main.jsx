@@ -7,6 +7,7 @@ import './backend.css';
 import './maps.css';
 import { confirmedDate, clockTime, editableSettings } from './date-time.mjs';
 import VenueMap from './VenueMap.jsx';
+import WeddingExperience from './WeddingExperience.jsx';
 const PinPicker = React.lazy(() => import('./PinPicker.jsx'));
 
 const titles = { mehndi: 'Mehndi', baraat: 'Baraat', walima: 'Walima' };
@@ -27,126 +28,12 @@ function Botanical({ className = '' }) {
   </svg>;
 }
 function Monogram({ small = false }) { return <span className={`monogram ${small ? 'small' : ''}`} aria-label="Wajid">W<span aria-hidden="true">✧</span></span>; }
-function Header({ admin = false, groom = 'Wajid' }) {
+function Header({ admin = false, groom = 'Wajid Ali' }) {
   return <header className="site-header"><a className="brand" href="/" aria-label="Invitation home"><Monogram small /><span>{groom.toUpperCase()}<small>A WEDDING CELEBRATION</small></span></a><nav aria-label="Main navigation">{admin ? <a href="/">View invitation <Icon as={ExternalLink} size={14}/></a> : <><a href="#celebration" className="desktop-link">The celebration</a><a href="#find-invitation">Your invitation <Icon as={ArrowRight} size={14}/></a></>}</nav></header>;
 }
 function Footer() { return <footer className="site-footer"><span>Made with love. Shared with you.</span><Icon as={Heart} size={14}/><a href="/backend">Family access <Icon as={LockKeyhole} size={11}/></a></footer>; }
 function Loading({ text = 'Preparing something special…' }) { return <div className="loading"><Icon as={LoaderCircle} className="spin"/><p>{text}</p></div>; }
 function ErrorBox({ error }) { return error ? <p className="error" role="alert">{error}</p> : null; }
-
-function GuestHome({ data, open }) {
-  const [query, setQuery] = useState('');
-  const [opening, setOpening] = useState(null);
-  const openingTimer = useRef(null);
-  useEffect(() => () => clearTimeout(openingTimer.current), []);
-  const openEnvelope = guest => {
-    if (opening) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { open(guest.id); return; }
-    setOpening(guest);
-    openingTimer.current = setTimeout(() => open(guest.id), 1100);
-  };
-  const list = data.guests.filter(g => `${g.name} ${g.label}`.toLowerCase().includes(query.trim().toLowerCase()));
-  return <div className="royal-site home-site">
-    <Header groom={data.settings.groom}/>
-    <main id="celebration" className="welcome">
-      <div className="welcome-intro reveal">
-        <div className="eyebrow"><span className="tiny-star">✧</span> AN INVITATION FROM THE HEART</div>
-        <p className="hero-bismillah" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-        <p className="intro-line">With the blessings of Allah</p>
-        <h1>{data.settings.groom}<span>and a beautiful <br/>new beginning.</span></h1>
-        <Ornament/>
-        <p className="intro-message">A wedding. A thousand blessings.<br/>And our favourite people by our side.</p>
-        <a className="hero-link" href="#find-invitation">Discover your invitation <Icon as={ArrowRight} size={17}/></a>
-        <div className="host-line"><span className="host-rule"/>{data.settings.host}</div>
-      </div>
-      <section id="find-invitation" className="selection-wrap reveal">
-        <div className="selection-card">
-          <div className="card-crest"><span/> <Monogram/> <span/></div>
-          <p className="eyebrow">PERSONALLY INVITED. DEARLY CHERISHED.</p>
-          <h2>A little envelope,<br/><em>just for you.</em></h2>
-          <p className="selection-description">Select your name to open your invitation.</p>
-          <label className="search-field"><Icon as={Search} size={18}/><input aria-label="Find your name" placeholder="Search your name…" value={query} onChange={e => setQuery(e.target.value)}/>{query && <button className="icon-button" aria-label="Clear search" onClick={() => setQuery('')}><Icon as={X} size={16}/></button>}</label>
-          <div className="guest-list" aria-label="Guest invitations">
-            {list.slice(0, 25).map((guest, index) => <button key={guest.id} disabled={!!opening} className="guest-option" style={{ '--i': Math.min(index, 5) }} onClick={() => openEnvelope(guest)}><span className="guest-initial">{guest.name.trim().charAt(0)}</span><span>{guest.name}{guest.label && <small>{guest.label}</small>}</span><Icon as={ArrowRight} size={17}/></button>)}
-            {!list.length && <p className="empty-search">{data.guests.length ? 'No name found. Try a different spelling, or contact the family.' : 'Our guest list is being prepared. Please check back soon.'}</p>}
-          </div>
-          {list.length > 25 && <p className="fine-print">Type your name to narrow down the list.</p>}
-          <p className="card-note"><Icon as={Heart} size={12}/> A special place, reserved for you.</p>
-        </div>
-        <div className="under-card"><span/> Your presence is our greatest gift. <span/></div>
-      </section>
-    </main>
-    <div className="celebration-ribbon"><span>A CELEBRATION OF LOVE</span><div>Mehndi <i>✧</i> Baraat <i>✧</i> Walima</div><span>MEMORIES TO LAST A LIFETIME</span></div>
-    <div className="welcome-bottom"><Ornament/><span>Some days are remembered forever.<br/><em>This one begins with you.</em></span><Ornament/></div>
-    <Footer/>
-    {opening && <div className="envelope-overlay" role="status" aria-live="polite"><div className="opening-envelope" aria-hidden="true"><div className="envelope-letter"><Monogram/></div><div className="envelope-fold"/><div className="wax-seal">W</div></div><p>With love, for {opening.name}</p><span>YOUR INVITATION IS OPENING</span></div>}
-  </div>;
-}
-const formatDate = date => new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-const formatTime = time => new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-function calendarDownload(event, groom) {
-  const clean = value => value.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
-  const start = event.date.replaceAll('-', '');
-  const next = new Date(`${event.date}T12:00:00Z`); next.setUTCDate(next.getUTCDate() + 1);
-  const end = next.toISOString().slice(0,10).replaceAll('-', '');
-  const timed = !!event.time;
-  const stamp = timed ? new Date(`${event.date}T${event.time}:00+05:00`).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '') : '';
-  const content = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Wajid Wedding//EN','BEGIN:VEVENT',`UID:${event.id}-${event.date}@wajid-wedding`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`, timed ? `DTSTART:${stamp}` : `DTSTART;VALUE=DATE:${start}`, ...(timed ? [] : [`DTEND;VALUE=DATE:${end}`]),`SUMMARY:${clean(`${groom} — ${event.name}`)}`,`LOCATION:${clean([event.venue,event.address].filter(Boolean).join(', '))}`,'DESCRIPTION:With love from our family. Please check your invitation link for the latest details.','END:VEVENT','END:VCALENDAR'].join('\r\n');
-  const url = URL.createObjectURL(new Blob([content], { type: 'text/calendar;charset=utf-8' }));
-  const link = document.createElement('a'); link.href = url; link.download = `${event.name}.ics`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-function EventCard({ event, groom, index }) {
-  event = { ...event, date: confirmedDate(event.date), time: clockTime(event.time) };
-  const Symbols = [Flower2, Sparkles, Heart];
-  return <article className={`event-card event-${event.id}`} style={{ '--i': index }}><div className="event-top"><span className="event-number">0{index + 1}</span><Icon as={Symbols[['mehndi','baraat','walima'].indexOf(event.id)]} size={25}/><span className="eyebrow">YOU’RE INVITED</span></div><h3>{event.name}</h3><p className="event-subtitle">{event.subtitle}</p><div className="event-divider"/><div className="event-detail"><Icon as={CalendarDays}/><span>{event.date ? formatDate(event.date) : 'Date to be announced'}</span></div><div className="event-detail"><Icon as={Clock3}/><span>{event.time ? `${formatTime(event.time)} · Pakistan time` : 'Time to be announced'}</span></div><div className="event-detail venue"><Icon as={MapPin}/><span>{event.venue || 'Venue to be announced'}{event.address && <small>{event.address}</small>}</span></div><div className="event-actions">{event.date && <button className="text-button" onClick={() => calendarDownload(event,groom)}><Icon as={CalendarDays} size={14}/> Save the date</button>}</div><VenueMap event={event}/></article>;
-}
-function Invitation({ id, back }) {
-  const [data, setData] = useState(null), [error, setError] = useState('');
-  const heading = useRef(null);
-  useEffect(() => {
-    let active = true;
-    const refresh = () => api(`/invitation/${encodeURIComponent(id)}`).then(result => { if (active) { setData(result); setError(''); } }).catch(err => { if (active) { setError(err.message); if (err.status === 404) setData(null); } });
-    refresh();
-    const timer = setInterval(refresh, 30000);
-    const onFocus = () => refresh(); window.addEventListener('focus', onFocus);
-    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', onFocus); };
-  }, [id]);
-  useEffect(() => { if (data) heading.current?.focus({ preventScroll: true }); }, [data?.guest.id]);
-  return <div className="royal-site invitation-site">
-    <Header groom={data?.settings.groom}/>
-    <main className="invitation-page">
-      <button className="text-button back-button" onClick={back}><Icon as={ArrowLeft} size={16}/> Back to guest list</button>
-      <ErrorBox error={error}/>
-      {!data ? !error && <Loading/> : <div className="reveal">
-        <section className="personal-invitation" id="celebration">
-          <div className="invitation-hero-copy">
-            <p className="bismillah" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-            <p className="eyebrow">WITH THE BLESSINGS OF ALLAH & OUR FAMILIES</p>
-            <h1>{data.settings.groom}<span>The beginning of forever.</span></h1>
-            <Ornament/>
-            <p className="invitation-message">{data.settings.message}</p>
-          </div>
-          <div className="invitation-hero-crest" aria-hidden="true"><Monogram/><p>A WEDDING<br/>CELEBRATION</p></div>
-        </section>
-        <section id="find-invitation" className="addressed-to">
-          <div className="guest-card-flourish" aria-hidden="true">✧</div>
-          <p className="eyebrow">WITH LOVE, WE INVITE</p>
-          <h2 ref={heading} tabIndex={-1}>{data.guest.name}</h2>
-          {data.guest.withFamily && <span className="family-badge"><Icon as={Users} size={15}/> Together with your family</span>}
-          <p>We would be honoured by your presence at<br className="desktop-link"/> <strong>{data.settings.events.map(e=>e.name).join(data.settings.events.length === 2 ? ' & ' : ', ').replace(/, ([^,]*)$/, ' & $1')}</strong>.</p>
-          <Botanical className="guest-card-botanical left"/><Botanical className="guest-card-botanical right"/>
-        </section>
-        <section className="events-section">
-          <div className="section-heading"><span className="eyebrow">THE OCCASIONS, THE JOY, THE MEMORIES</span><h2>Let’s celebrate <em>together.</em></h2><p>These moments will be even more beautiful with you.</p></div>
-          <div className="events-grid">{data.settings.events.map((event,index)=><EventCard key={event.id} event={event} groom={data.settings.groom} index={index}/>)}</div>
-          {data.settings.events.some(e=>!confirmedDate(e.date)) && <p className="dates-note"><Icon as={CalendarDays} size={16}/> We’re putting the finishing touches on our celebrations.<br/>Confirmed dates will appear right here on your invitation.</p>}
-        </section>
-        <div className="closing"><Monogram small/><p>{data.settings.closing}</p><span>{data.settings.host}</span><Ornament/></div>
-      </div>}
-    </main>
-    <Footer/>
-  </div>;
-}
 
 const emptyGuest = () => ({ name: '', label: '', events: ['baraat'], withFamily: false });
 function GuestEditor({ guest, onSave, onClose, busy, error }) {
@@ -217,16 +104,7 @@ function Admin() {
   return <div className="admin-app"><Header admin groom={data.settings.groom}/><main className="admin-main"><div className="admin-title"><div><p className="eyebrow">A LITTLE PLANNING, A LOT OF LOVE</p><h1>The family dashboard.</h1><p>Add your guests, choose their functions, and share their invitation.</p></div><button className="text-button" onClick={async()=>{try{await api('/logout',{method:'POST',body:'{}'});setData(null);}catch(e){setError(e.message);}}}><Icon as={LogOut} size={16}/> Sign out</button></div>{data.development && <div className="preview-banner">Your changes are saved on this computer. Guests can open their links once the site is published.</div>}<div className="dashboard-guide"><span><b>01</b> Add a guest</span><Icon as={ArrowRight} size={15}/><span><b>02</b> Choose functions & family</span><Icon as={ArrowRight} size={15}/><span><b>03</b> Copy & share their link</span></div><div className="stats-grid"><div><span>Total invitations</span><strong>{data.guests.length}</strong><Icon as={Mail}/></div>{Object.entries(titles).map(([id,name])=><div key={id}><span>{name} invitations</span><strong>{data.guests.filter(g=>g.events.includes(id)).length}</strong><Icon as={Flower2}/></div>)}</div><div className="admin-tabs" role="tablist" aria-label="Dashboard sections"><button role="tab" aria-selected={tab==='guests'} aria-controls="guests-panel" id="guests-tab" onClick={()=>{setTab('guests');setError('');}}><Icon as={Users}/> Guest list</button><button role="tab" aria-selected={tab==='settings'} aria-controls="settings-panel" id="settings-tab" onClick={()=>{setTab('settings');setError('');}}><Icon as={CalendarDays}/> Dates & venues</button></div><section id="guests-panel" role="tabpanel" aria-labelledby="guests-tab" hidden={tab!=='guests'}><div className="admin-section-title"><div><h2>Your favourite people</h2><p>Each guest sees only the functions you select for them.</p></div><div className="button-group"><button className="secondary-button" onClick={exportBackup}><Icon as={Download} size={16}/> Download backup</button><button className="primary-button" onClick={()=>{setError('');setEditor({});}}><Icon as={Plus}/> Add new guest</button></div></div>{!editor && <ErrorBox error={error}/>}<div className="guest-toolbar"><label className="search-field"><Icon as={Search}/><input aria-label="Search guests" placeholder="Search guests…" value={query} onChange={e=>setQuery(e.target.value)}/></label><select aria-label="Filter by function" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All functions</option>{Object.entries(titles).map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></div><div className="guest-table-wrap"><table className="guest-table"><thead><tr><th>GUEST</th><th>INVITED TO</th><th>INVITATION</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map(guest=><tr key={guest.id}><td><div className="table-name"><span className="guest-initial">{guest.name.charAt(0)}</span><span>{guest.name}{guest.label && <small>{guest.label}</small>}</span></div></td><td><div className="pill-group">{guest.events.map(id=><span key={id} className={`event-pill ${id}`}>{titles[id]}</span>)}</div></td><td><span className="family-status">{guest.withFamily?<><Icon as={Users} size={15}/> With family</>:'Individual'}</span></td><td><div className="row-actions"><button className="icon-button" title="Copy invitation link" aria-label={`Copy link for ${guest.name}`} onClick={()=>copy(guest)}><Icon as={Copy} size={16}/><span className="action-caption">Copy link</span></button><a className="icon-button" title="Preview invitation" aria-label={`Preview ${guest.name}`} href={`/?invite=${guest.id}`} target="_blank" rel="noreferrer"><Icon as={ExternalLink} size={16}/></a><button className="icon-button" aria-label={`Edit ${guest.name}`} onClick={()=>{setError('');setEditor(guest);}} disabled={busy}><Icon as={Pencil} size={16}/><span className="action-caption">Edit</span></button><button className="icon-button delete-button" aria-label={`Remove ${guest.name}`} onClick={()=>remove(guest)} disabled={busy}><Icon as={Trash2} size={16}/></button></div></td></tr>)}</tbody></table>{!filtered.length && <div className="table-empty"><Icon as={Mail} size={30}/><h3>{data.guests.length?'No matching guests':'Your celebration starts with your people.'}</h3><p>{data.guests.length?'Try another name or function.':'Add your first guest to create a personal invitation.'}</p></div>}</div><p className="table-count">{filtered.length} invitation{filtered.length!==1?'s':''} · Family invitations may include multiple people.</p></section><section id="settings-panel" role="tabpanel" aria-labelledby="settings-tab" hidden={tab!=='settings'}><SettingsForm initial={data.settings} save={saveSettings} busy={busy} error={error}/></section></main><Footer/>{editor && <GuestEditor guest={editor.id?editor:null} onSave={saveGuest} onClose={()=>{setEditor(null);setError('');}} busy={busy} error={error}/>}<div className={`toast ${toast?'visible':''}`} role="status">{toast && <><Icon as={Check}/>{toast}</>}</div></div>;
 }
 function App() {
-  const [id,setId]=useState(new URLSearchParams(location.search).get('invite'));
-  const [data,setData]=useState(null),[error,setError]=useState('');
   const admin=['/backend','/admin'].includes(location.pathname.replace(/\/$/,''));
-  const load=()=>{setError('');api('/public').then(setData).catch(e=>setError(e.message));};
-  useEffect(()=>{if(!admin)load();const pop=()=>setId(new URLSearchParams(location.search).get('invite'));window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop);},[]);
-  const navigate=next=>{history.pushState({},'',next?`/?invite=${encodeURIComponent(next)}`:'/');setId(next);window.scrollTo({top:0,behavior:'instant'});if(!next)load();};
-  if(admin)return <Admin/>;
-  if(id)return <Invitation key={id} id={id} back={()=>navigate(null)}/>;
-  if(error)return <><Header/><main className="loading"><ErrorBox error={error}/><button className="primary-button" onClick={load}>Try again</button></main></>;
-  if(!data)return <><Header/><Loading/></>;
-  return <GuestHome data={data} open={navigate}/>;
+  return admin ? <Admin/> : <WeddingExperience/>;
 }
 createRoot(document.getElementById('root')).render(<App/>);

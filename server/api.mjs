@@ -71,7 +71,14 @@ export function createApi({ store, password, username = 'ma9440863', development
         return json({ ok: true }, 200, { 'Set-Cookie': cookie(`${expires}.${sign(expires, sessionSecret)}`, MAX_AGE) });
       }
       if (path === '/logout' && method === 'POST') return json({ ok: true }, 200, { 'Set-Cookie': cookie('', 0) });
-      const settings = await store.get('settings') || structuredClone(defaultSettings);
+      const saved = await store.get('settings') || structuredClone(defaultSettings);
+      const settings = {
+        ...saved,
+        groom: saved.groom === 'Wajid' ? defaultSettings.groom : saved.groom,
+        host: saved.host === 'With love, from our family' ? defaultSettings.host : saved.host,
+        message: saved.message === 'With grateful hearts and the blessings of Allah, we invite you to share in the joy of a beautiful new beginning.' ? defaultSettings.message : saved.message,
+        closing: saved.closing === 'Your presence is our most cherished gift.' ? defaultSettings.closing : saved.closing,
+      };
       if (path === '/public' && method === 'GET') {
         const guests = await store.guests();
         const { events, ...publicSettings } = settings;

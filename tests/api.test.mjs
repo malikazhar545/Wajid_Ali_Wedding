@@ -14,6 +14,20 @@ function fixture(options = {}) {
 }
 const guest = { name: 'Ahmed Ali', label: 'Lahore', events: ['baraat'], withFamily: true };
 
+test('redesign preserves saved wedding dates, venues, custom wording and guest records',async()=>{
+  const f=fixture();
+  const saved=structuredClone(defaultSettings);
+  saved.groom='Wajid';saved.host='Our parents and family';saved.message='Our own invitation message.';
+  saved.events[0]={...saved.events[0],date:'2027-02-12',venue:'Family Garden',address:'Our chosen address',location:{lat:31.5,lng:74.3}};
+  f.records.set('settings',saved);f.records.set('guests/retained',{...guest,id:'retained',events:['mehndi']});
+  const card=await (await f.request('/invitation/retained')).json();
+  assert.equal(card.settings.groom,'Wajid Ali');
+  assert.equal(card.settings.host,saved.host);assert.equal(card.settings.message,saved.message);
+  assert.deepEqual(card.settings.events,[saved.events[0]]);
+  assert.equal(card.guest.name,guest.name);
+  assert.equal(f.records.get('settings').groom,'Wajid');
+});
+
 test('admin requires authentication and rejects bad password / forged sessions', async()=>{
   const f=fixture();
   assert.equal((await f.request('/admin')).status,401);
@@ -49,7 +63,7 @@ test('guest CRUD, per-guest function filtering, family selection and live date u
   let invitation=await (await f.request(`/invitation/${g.id}`)).json();
   assert.equal(invitation.guest.withFamily,true);
   assert.deepEqual(invitation.settings.events.map(e=>e.id),['baraat']);
-  assert.equal(invitation.settings.events[0].date,'');
+  assert.equal(invitation.settings.events[0].date,defaultSettings.events[1].date);
   const settings=structuredClone(defaultSettings);settings.events[1].date='2026-12-18';settings.events[1].time='19:30';
   assert.equal((await f.request('/admin/settings','PUT',settings)).status,200);
   invitation=await (await f.request(`/invitation/${g.id}`)).json();

@@ -1,13 +1,13 @@
 export const EVENT_IDS = ['mehndi', 'baraat', 'walima'];
 export const defaultSettings = {
-  groom: 'Wajid',
-  host: 'With love, from our family',
-  message: 'With grateful hearts and the blessings of Allah, we invite you to share in the joy of a beautiful new beginning.',
-  closing: 'Your presence is our most cherished gift.',
+  groom: 'Wajid Ali',
+  host: 'With love & duas, from our family',
+  message: 'Together with our family, we request the honour of your presence and your duas as we celebrate this blessed new chapter.',
+  closing: 'We look forward to sharing our happiness with you.',
   events: [
-    { id: 'mehndi', name: 'Mehndi', subtitle: 'An evening of colour & joy', date: '', time: '', venue: '', address: '', mapUrl: '' },
-    { id: 'baraat', name: 'Baraat', subtitle: 'The beginning of forever', date: '', time: '', venue: '', address: '', mapUrl: '' },
-    { id: 'walima', name: 'Walima', subtitle: 'A celebration of togetherness', date: '', time: '', venue: '', address: '', mapUrl: '' },
+    { id: 'mehndi', name: 'Mehndi', subtitle: 'An evening of colour, laughter & love', date: '2026-12-17', time: '19:00', venue: '', address: '', mapUrl: '' },
+    { id: 'baraat', name: 'Baraat', subtitle: 'A celebration of love & new beginnings', date: '2026-12-18', time: '20:00', venue: '', address: '', mapUrl: '' },
+    { id: 'walima', name: 'Walima', subtitle: 'With grateful hearts, together', date: '2026-12-20', time: '13:00', venue: '', address: '', mapUrl: '' },
   ],
 };
 export const demoGuests = [

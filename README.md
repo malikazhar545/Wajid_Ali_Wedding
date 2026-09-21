@@ -1,6 +1,6 @@
-﻿# Wajid · A Wedding Celebration
+﻿# Wajid Ali · A Wedding Celebration
 
-A royal emerald-and-ivory wedding invitation with a private organizer dashboard, personalized guest cards, and a persistent backend.
+A burgundy-and-ivory floral wedding invitation with a private organizer dashboard, personalized guest cards, and a persistent backend.
 
 ## Organizer guide
 
@@ -44,7 +44,9 @@ Netlify Functions use Netlify Blobs with strong consistency. Production data sur
 
 ## Design and data
 
-Custom floral Mughal arch artwork, emerald backgrounds, ivory cards, gold details and locally hosted fonts. Name selection opens an envelope animation; reduced-motion preferences skip it. Mobile dashboard cards keep editing and link sharing within reach.
+Original watercolor floral artwork, lace borders, burgundy envelopes, ivory paper, a WA monogram, Arabic Bismillah and locally hosted calligraphy. Name selection opens an envelope animation; reduced-motion preferences skip it. Occasion previews, a live countdown, calendar downloads and personalized date cards make the invitation interactive. The existing organizer dashboard is preserved.
+
+New installations use demonstration dates of 17, 18 and 20 December 2026. Replace these through **Dates & venues**. Existing saved dates, venues and guest records are preserved during deployment; dates are never hardcoded in the frontend. Calendar exports and countdowns use Pakistan time.
 
 Invalid hand-edited dates appear unconfirmed until the organizer chooses a valid calendar date. Raw data is not silently rewritten. Fonts and their licenses are in `public/fonts/`. The image source and generation prompt are documented in `design-assets/ARTWORK.md`.
 

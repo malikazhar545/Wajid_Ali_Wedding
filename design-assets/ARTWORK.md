@@ -1,4 +1,14 @@
-# Royal garden artwork
+# Wedding artwork
+
+## Burgundy floral stationery (current public invitation)
+
+Tool: built-in `image_gen`, reference-guided generation. Original: `design-assets/burgundy-florals-source.png`. Website asset: `public/burgundy-florals.webp` (about 541 KiB). WebP conversion preserves the original transparent background; the center alpha was checked as zero. The three wedding stationery images supplied by the user were visual references for the burgundy, ivory and botanical direction, not website content.
+
+Generation brief: Original fine-art watercolor floral artwork for a luxury wedding invitation, with deep burgundy, blush and ivory roses and peonies, sage leaves and restrained antique-gold botanical sprigs. Arrange florals in the upper-left and lower-right corners with generous empty space in the center. Genuinely transparent background and center. Use the attached stationery images as aesthetic references only. No text, lettering, logos or watermark.
+
+The WA monogram, envelope, wax seal and lace border are native HTML/CSS/SVG elements. Invitation text stays selectable HTML, including the Arabic Bismillah. Great Vibes is self-hosted in `public/fonts/` with its SIL Open Font License, alongside Cormorant Garamond and DM Sans.
+
+## Royal garden artwork (existing dashboard)
 
 Generated with the built-in image generation tool. Original: `design-assets/royal-garden-source.png`. Web asset: `public/royal-garden.webp` (174 KB). The web file only changes compression and format. Re-create it with `node tests/prepare-artwork.mjs`.
 
