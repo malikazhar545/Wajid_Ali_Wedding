@@ -29,8 +29,8 @@ function Florals({className=''}) {return <><img className={`w-florals ${classNam
 function Header({back, invitation=false}) {
   return <header className="w-header"><a className="w-brand" href={invitation?'#find-invitation':'/'} aria-label="Wedding invitation home"><Mark/></a><nav aria-label="Invitation navigation">{back?<button onClick={back} className="w-back" aria-label="Back to guest list"><ArrowLeft size={15}/> Guest list</button>:<a className="w-nav-occasions" href={invitation?'#itinerary-heading':'#occasions'}>The celebrations</a>}<a className="w-nav-invite" href="#find-invitation">Your invitation <ArrowRight size={14}/></a></nav></header>;
 }
-function Footer({groom}) {
-  return <footer className="w-footer"><Mark/><p>With love & duas, from our family to yours.</p><span>{displayName(groom)} <i>·</i> THE WEDDING CELEBRATION</span><a href="/family"><LockKeyhole size={11}/> Family access</a></footer>;
+function Footer({groom,familyAccess=true}) {
+  return <footer className="w-footer"><Mark/><p>With love & duas, from our family to yours.</p><span>{displayName(groom)} <i>·</i> THE WEDDING CELEBRATION</span>{familyAccess&&<a href="/family"><LockKeyhole size={11}/> Family access</a>}</footer>;
 }
 function Opening({guest}) {
   return <div className="envelope-overlay w-opening" role="status"><div className="w-opening-envelope" aria-hidden="true"><div className="w-opening-letter"><Mark/><span>A PERSONAL INVITATION</span></div><div className="w-envelope-front"/><div className="w-envelope-flap"/><div className="w-opening-seal"><Mark/></div></div><p>Especially for {guest.name}</p><span>WITH LOVE, FROM THE FAMILY OF WAJID ALI</span></div>;
@@ -123,7 +123,7 @@ function Invitation({id,back}) {
   useEffect(()=>{if(data)heading.current?.focus({preventScroll:true});},[data?.guest.id]);
   useEffect(()=>{if(!data)return;const previous=document.title;document.title=invitationTitle(data.guest,displayName(data.settings.groom));return()=>{document.title=previous;};},[data?.guest.name,data?.settings.groom]);
   const share=async()=>{const title=invitationTitle(data.guest,displayName(data.settings.groom));const payload={title,text:title,url:`${location.origin}${invitationPath(data.guest)}`};try{if(navigator.share){await navigator.share(payload);return;}await navigator.clipboard.writeText(payload.url);setShareStatus('Invitation link copied.');}catch(err){if(err.name!=='AbortError')setShareStatus(`Your invitation link: ${payload.url}`);}};
-  return <div className="atelier invitation-atelier"><Header invitation back={back}/><main>
+  return <div className="atelier invitation-atelier">{back && <Header invitation back={back}/>}<main>
     {error&&<p className="w-error" role="alert">{error}</p>}
     {!data ? <div className="w-loading">{error?'Please contact the family for your invitation.':'Opening your invitation…'}</div> : <>
       <section className="w-invitation-cover" id="find-invitation"><div className="w-folio"><Florals/><div className="w-folio-inner"><p className="w-bismillah" lang="ar" dir="rtl">{BISMILLAH}</p><span className="w-kicker">WITH THE BLESSINGS OF ALLAH</span><Mark/><p className="w-overline">YOU ARE CORDIALLY INVITED TO THE WEDDING OF</p><h1>{displayName(data.settings.groom)}</h1><Flourish/><p className="w-invitation-message">{data.settings.message}</p><div className="w-addressed"><p className="w-overline">A WARM INVITATION FOR</p><h2 ref={heading} tabIndex={-1}>{data.guest.name}</h2>{data.guest.withFamily&&<span className="family-badge"><Users size={14}/> Together with your family</span>}<p>We would be delighted to welcome you to<br/><strong>{data.settings.events.map(event=>event.name).join(', ').replace(/, ([^,]*)$/,' & $1')}</strong>.</p></div><span className="w-folio-host">{data.settings.host}</span></div></div></section>
@@ -131,7 +131,7 @@ function Invitation({id,back}) {
       <Rsvp guest={data.guest} onSaved={rsvp=>setData(current=>({...current,guest:{...current.guest,rsvp}}))}/>
       <section className="w-invitation-closing"><Flourish/><p>{data.settings.closing}</p><span>{data.settings.host}</span><div className="w-guest-actions"><button className="w-share-button" onClick={share}><Share2 size={17}/> Share invitation</button><button className="w-print-button" onClick={()=>window.print()}><Printer size={17}/> Print card</button></div>{shareStatus&&<p className="w-share-status" role="status"><Check size={13}/>{shareStatus}</p>}</section>
     </>}
-  </main><Footer groom={data?.settings.groom}/></div>;
+  </main><Footer groom={data?.settings.groom} familyAccess={!!back}/></div>;
 }
 export default function WeddingExperience() {
   const route=()=>{const params=new URLSearchParams(location.search);return {invite:invitationId(location.pathname)||params.get('invite'),preview:params.get('preview')};};
