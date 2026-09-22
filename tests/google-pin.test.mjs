@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseGooglePin} from '../src/google-pin.mjs';
+import {parseGooglePin,googlePlaceLink} from '../src/google-pin.mjs';
 import {resolveMapPin} from '../server/resolve-map-pin.mjs';
 
 test('imports exact Google pins while ignoring a place camera position',()=>{
@@ -10,6 +10,15 @@ test('imports exact Google pins while ignoring a place camera position',()=>{
   assert.deepEqual(parseGooglePin('https://www.google.com/maps/place/Venue/@30,70,14z/data=!3d31.38136!4d74.18635'),expected);
   assert.deepEqual(parseGooglePin('https://www.google.com/maps/place/31.38136,74.18635/@30,70,14z'),expected);
   for(const value of ['91,74','31,181','https://www.google.com/maps/@31.3,74.2,15z','https://www.google.com/maps/place/%ZZ','https://evil.example/?q=31.38136,74.18635','https://www.google.com/maps/dir/A/B/data=!3d31.3!4d74.2'])assert.equal(parseGooglePin(value),null);
+});
+
+test('reads the selected Manga Mandi point, not the different camera coordinates',()=>{
+  assert.deepEqual(parseGooglePin('https://www.google.com/maps/place/Manga+Mandi,+Pakistan/@31.2996906,74.0717447,18z/data=!4m6!3m5!1s0x39185706b071549d:0x2454ab657170f454!8m2!3d31.299426!4d74.0700372!16s%2Fg%2F1hc3kg8f2?entry=ttu'),{lat:31.299426,lng:74.0700372});
+});
+
+test('allows listing links without inventing coordinates or accepting camera-only URLs',()=>{
+  for(const url of ['https://maps.app.goo.gl/hall','https://goo.gl/maps/hall','https://www.google.com/maps/place/Marriage+Hall/','https://www.google.com/maps?cid=123'])assert.equal(googlePlaceLink(url),url);
+  for(const url of ['https://maps.app.goo.gl/','https://goo.gl/maps/','https://www.google.com/maps/@31,74,15z','https://www.google.com/maps/dir/A/B','https://evil.example/maps/place/hall','https://www.google.com/maps/search/?api=1&query=hall'])assert.equal(googlePlaceLink(url),null);
 });
 
 test('resolves Google short links without following untrusted redirects',async()=>{

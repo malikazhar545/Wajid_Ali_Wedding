@@ -21,3 +21,9 @@ test('Google short links remain shareable; unsafe protocols cannot become map li
   assert.equal(short.embed,'');
   assert.equal(mapLinks({mapUrl:'javascript:alert(1)'}),null);
 });
+
+test('a nearby landmark link keeps its destination without showing an unrelated address pin',()=>{
+  const links=mapLinks({venue:'Home ceremony',address:'Our street address',mapUrl:'https://maps.app.goo.gl/nearby-hall',location:null});
+  assert.equal(links.directions,'https://maps.app.goo.gl/nearby-hall');
+  assert.equal(links.embed,'');
+});

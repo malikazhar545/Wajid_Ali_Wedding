@@ -13,7 +13,9 @@ export function mapLinks(event) {
   const { lat, lng } = event.location || {};
   const hasPin = Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
   if (hasPin) { pinnedQuery = `${lat},${lng}`; custom = ''; }
-  const query = pinnedQuery || [event.venue, event.address].filter(Boolean).join(', ');
+  // An unresolved listing link can point to a landmark distinct from the address.
+  // Do not show a different address pin alongside that destination.
+  const query = pinnedQuery || (custom ? '' : [event.venue, event.address].filter(Boolean).join(', '));
   if (!custom && !query) return null;
   const encoded = encodeURIComponent(query);
   return {

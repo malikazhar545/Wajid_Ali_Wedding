@@ -63,6 +63,7 @@ function SettingsForm({ initial, save, busy, error }) {
   const dirty = JSON.stringify(form) !== JSON.stringify(editableSettings(initial)) || initial.events.some(event => event.date !== confirmedDate(event.date) || event.time !== clockTime(event.time));
   useEffect(()=>{ const guard=e=>{ if(dirty) {e.preventDefault();e.returnValue='';} }; window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard); },[dirty]);
   const updateEvent = (id,key,value) => setForm({...form,events:form.events.map(e=>e.id===id?{...e,[key]:value}:e)});
+  const updateLocation = (id,selection) => setForm(current=>({...current,events:current.events.map(e=>e.id===id?{...e,...selection}:e)}));
   return <form className="settings-form" onSubmit={e=>{e.preventDefault();save(form);}}>
     <div className="admin-section-title"><div><h2>Dates & venues</h2><p>Choose a date from the calendar and enter the venue. Every guest card updates.</p></div><button className="primary-button" disabled={busy || !dirty}>{busy?'Saving…':'Save details'}<Icon as={Check}/></button></div>
     <ErrorBox error={error}/>
@@ -73,9 +74,9 @@ function SettingsForm({ initial, save, busy, error }) {
       <label>Time · Pakistan (PKT)<input type="time" value={event.time} onChange={e=>updateEvent(event.id,'time',e.target.value)}/></label>
       <label>Venue<input maxLength={200} placeholder="e.g. Royal Marquee" value={event.venue} onChange={e=>updateEvent(event.id,'venue',e.target.value)}/></label>
       <label>Address<input maxLength={400} placeholder="Street, area and city" value={event.address} onChange={e=>updateEvent(event.id,'address',e.target.value)}/></label>
-      <label>Location link <span className="optional">(optional)</span><input type="url" pattern="https://.*" maxLength={1000} placeholder="Paste a Google Maps link" value={event.mapUrl} onChange={e=>updateEvent(event.id,'mapUrl',e.target.value)}/></label>
-      <p className="map-field-help">Choose a pin below to send guests to the exact spot. The selected pin takes priority over the address and any pasted link.</p>
-      <React.Suspense fallback={<p className="map-field-help">Loading location picker…</p>}><PinPicker event={event} onChange={location=>updateEvent(event.id,'location',location)}/></React.Suspense>
+      <label>Location link <span className="optional">(optional)</span><input type="url" pattern="https://.*" maxLength={1000} placeholder="Paste a Google Maps link" value={event.mapUrl} onChange={e=>updateLocation(event.id,{mapUrl:e.target.value,location:null})}/></label>
+      <p className="map-field-help">Write your full address above. Choose any map pin or paste a nearby hall / landmark link for guest directions. Selecting a new location replaces the previous destination.</p>
+      <React.Suspense fallback={<p className="map-field-help">Loading location picker…</p>}><PinPicker event={event} onChange={selection=>updateLocation(event.id,selection)}/></React.Suspense>
       <VenueMap key={event.venue+event.address+event.mapUrl+JSON.stringify(event.location)} event={event} preview/>
       <label>Card subtitle<input maxLength={150} value={event.subtitle} onChange={e=>updateEvent(event.id,'subtitle',e.target.value)}/></label>
     </section>)}</div>

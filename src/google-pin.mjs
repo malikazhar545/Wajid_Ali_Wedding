@@ -33,3 +33,15 @@ export function parseGooglePin(value) {
   // @lat,lng describes the camera viewport, not necessarily the selected place.
   return null;
 }
+
+// A shared listing is useful even when Google does not expose its coordinates.
+// Camera-only and route URLs must not masquerade as a selected place.
+export function googlePlaceLink(value) {
+  const url=googleMapsUrl(value);
+  if(!url || url.href.length>1000)return null;
+  if(url.hostname==='maps.app.goo.gl')return url.pathname.length>1?url.href:null;
+  if(url.hostname==='goo.gl')return url.pathname.length>6?url.href:null;
+  if(url.pathname.startsWith('/maps/dir'))return null;
+  if(/^\/maps\/place\/[^/]+/.test(url.pathname) || url.searchParams.get('query_place_id') || url.searchParams.get('cid') || url.searchParams.get('q')?.startsWith('place_id:'))return url.href;
+  return null;
+}
