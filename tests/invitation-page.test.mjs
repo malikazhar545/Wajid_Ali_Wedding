@@ -26,12 +26,15 @@ test('raw HTML gives crawlers a personal title, card image and canonical URL wit
   const response=await invitationPage(request(invitationPath(guest)),{store,template});
   assert.equal(response.status,200);
   assert.equal(response.headers.get('cache-control'),'no-store');
+  assert.equal(response.headers.get('netlify-cdn-cache-control'),'public, durable, max-age=60');
   assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow');
   const html=await response.text();
   assert(html.includes(`<title>${invitationTitle(guest)}</title>`));
   assert(html.includes(`property="og:title" content="${invitationTitle(guest)}"`));
-  assert(html.includes('property="og:image" content="https://wedding.example/wedding-share-card.png"'));
+  assert(html.includes('property="og:image" content="https://wedding.example/wedding-share-card-v2.jpg"'));
   assert(html.includes('property="og:image:width" content="1200"'));
+  assert(html.includes('property="og:image:type" content="image/jpeg"'));
+  assert(html.indexOf('property="og:title"') < html.indexOf('rel="stylesheet"'));
   assert(html.includes(`rel="canonical" href="https://wedding.example${invitationPath(guest)}"`));
   assert.equal((html.match(/<title>/g)||[]).length,1);
   assert.equal((html.match(/name="description"/g)||[]).length,1);
@@ -52,12 +55,35 @@ test('Netlify rewrite and HEAD work; edited names use saved data rather than URL
 test('missing links are generic; saved names and titles cannot inject HTML',async()=>{
   const missing=await invitationPage(request('/invite/guessed-name/unknown'),{store,template});
   assert.equal(missing.status,404);
+  assert.equal(missing.headers.get('netlify-cdn-cache-control'),null);
   assert(!(await missing.text()).includes('guessed-name'));
-  const hostile={...guest,name:'</title><script>alert("x")</script> & guest'};
+  const hostile={...guest,name:'</title><script>alert("x")</script> & guest $&'};
   const hostileStore={get:async key=>key.startsWith('guests/')?hostile:{groom:'Groom " & < >'}};
   const response=await invitationPage(request(invitationPath(guest)),{store:hostileStore,template});
   const html=await response.text();
   assert(!html.includes('<script>alert'));
   assert(html.includes('&lt;/title&gt;&lt;script&gt;'));
   assert(html.includes('Groom &quot; &amp; &lt; &gt;'));
+  assert(html.includes('$&amp;'));
+});
+
+test('preview reads guest and settings concurrently and does not cache RSVP or other guests',async()=>{
+  const reads=[], resolvers=[];
+  const pending=invitationPage(request(invitationPath(guest)),{template,store:{get:key=>{
+    reads.push(key);return new Promise(resolve=>resolvers.push(()=>resolve(records.get(key))));
+  }}});
+  assert.deepEqual(reads,['guests/'+guest.id,'settings']);
+  resolvers.forEach(resolve=>resolve());
+  const response=await pending;
+  assert.equal(response.status,200);
+  assert(!(await response.text()).includes('rsvp'));
+});
+
+test('lighter share image keeps JPEG format and is less than half the original transfer size',async()=>{
+  const [jpeg,png]=await Promise.all([
+    readFile(new URL('../public/wedding-share-card-v2.jpg',import.meta.url)),
+    readFile(new URL('../public/wedding-share-card.png',import.meta.url)),
+  ]);
+  assert.equal(jpeg.readUInt16BE(0),0xffd8);
+  assert(jpeg.length < png.length/2);
 });

@@ -86,8 +86,10 @@ try {
   const shareField=page.getByRole('textbox',{name:'Invitation link for QA Wedding Guest'});
   assert.equal(await shareField.inputValue(),base+'/invite/qa-wedding-guest/'+createdId);
   await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copiedInvitation=text;}},configurable:true});});
+  const warmedPreview=page.waitForResponse(response=>response.url()===base+'/invite/qa-wedding-guest/'+createdId && response.request().resourceType()==='fetch');
   await page.getByRole('button',{name:'Copy link for QA Wedding Guest',exact:true}).click();
   assert.equal(await page.evaluate(()=>window.copiedInvitation),base+'/invite/qa-wedding-guest/'+createdId);
+  assert((await (await warmedPreview).text()).includes('property="og:title"'));
   await page.getByRole('tab', { name: 'Dates & venues' }).click();
   await page.locator('.event-settings-grid .settings-panel').first().getByLabel(/^Date/).fill('2026-12-17');
   await page.locator('.event-settings-grid .settings-panel').first().getByLabel('Venue', { exact:true }).fill('Royal Marquee');
@@ -127,8 +129,8 @@ try {
   assert(shareHtml.includes('<title>Wajid Ali invites you, QA Wedding Guest, to his wedding</title>'));
   assert(shareHtml.includes('property="og:image"'));
   assert(!shareHtml.includes('Ahmed Ali'));
-  const cardImage=await page.request.get(base+'/wedding-share-card.png');
-  assert.equal(cardImage.status(),200);assert.match(cardImage.headers()['content-type'],/image\/png/);
+  const cardImage=await page.request.get(base+'/wedding-share-card-v2.jpg');
+  assert.equal(cardImage.status(),200);assert.match(cardImage.headers()['content-type'],/image\/jpeg/);
   const guestRequests=[];
   invitationPage.on('request',request=>{if(request.url().includes('/api/'))guestRequests.push(request.url());});
   await invitationPage.goto(base+'/invite/qa-wedding-guest/'+createdId);

@@ -14,4 +14,5 @@ try {
   await page.goto('https://wedding-card.local/');
   await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(image=>image.decode()));});
   await page.screenshot({path:'public/wedding-share-card.png'});
+  await page.screenshot({path:'public/wedding-share-card-v2.jpg',type:'jpeg',quality:80});
 } finally { await browser.close(); }

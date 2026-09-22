@@ -3,7 +3,7 @@ import { ArrowRight, ArrowLeft, ArrowDown, Search, X, Heart, Flower2, Sparkles, 
 import VenueMap from './VenueMap.jsx';
 import Rsvp from './Rsvp.jsx';
 import { confirmedDate, clockTime } from './date-time.mjs';
-import { invitationId, invitationPath, invitationTitle } from './invitation-link.mjs';
+import { invitationId, invitationPath, invitationTitle, warmInvitationPreview } from './invitation-link.mjs';
 import './wedding.css';
 
 const occasions = {
@@ -122,7 +122,7 @@ function Invitation({id,back}) {
   useEffect(()=>{let active=true;const refresh=()=>get(`/invitation/${encodeURIComponent(id)}`).then(result=>{if(active){setData(result);setError('');}}).catch(err=>{if(active){setError(err.message);if(err.status===404)setData(null);}});refresh();const timer=setInterval(refresh,30000);window.addEventListener('focus',refresh);return()=>{active=false;clearInterval(timer);window.removeEventListener('focus',refresh);};},[id]);
   useEffect(()=>{if(data)heading.current?.focus({preventScroll:true});},[data?.guest.id]);
   useEffect(()=>{if(!data)return;const previous=document.title;document.title=invitationTitle(data.guest,displayName(data.settings.groom));return()=>{document.title=previous;};},[data?.guest.name,data?.settings.groom]);
-  const share=async()=>{const title=invitationTitle(data.guest,displayName(data.settings.groom));const payload={title,text:title,url:`${location.origin}${invitationPath(data.guest)}`};try{if(navigator.share){await navigator.share(payload);return;}await navigator.clipboard.writeText(payload.url);setShareStatus('Invitation link copied.');}catch(err){if(err.name!=='AbortError')setShareStatus(`Your invitation link: ${payload.url}`);}};
+  const share=async()=>{void warmInvitationPreview(data.guest);const title=invitationTitle(data.guest,displayName(data.settings.groom));const payload={title,text:title,url:`${location.origin}${invitationPath(data.guest)}`};try{if(navigator.share){await navigator.share(payload);return;}await navigator.clipboard.writeText(payload.url);setShareStatus('Invitation link copied.');}catch(err){if(err.name!=='AbortError')setShareStatus(`Your invitation link: ${payload.url}`);}};
   return <div className="atelier invitation-atelier">{back && <Header invitation back={back}/>}<main>
     {error&&<p className="w-error" role="alert">{error}</p>}
     {!data ? <div className="w-loading">{error?'Please contact the family for your invitation.':'Opening your invitation…'}</div> : <>
