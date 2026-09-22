@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { resolve } from 'node:path';
 import { createApi } from './server/api.mjs';
 import { defaultSettings, demoGuests } from './server/defaults.mjs';
+import { invitationPage } from './server/invitation-page.mjs';
 
 export default defineConfig(({ mode }) => ({
   optimizeDeps: { include: ['leaflet'] },
@@ -16,6 +17,15 @@ export default defineConfig(({ mode }) => ({
       let records = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { settings: defaultSettings, ...Object.fromEntries(demoGuests.map(g => [`guests/${g.id}`, g])) };
       const persist = () => { writeFileSync(`${file}.tmp`, JSON.stringify(records, null, 2)); renameSync(`${file}.tmp`, file); };
       persist();
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url.startsWith('/invite/')) return next();
+        try {
+          const template = await server.transformIndexHtml(req.url, readFileSync(resolve('index.html'), 'utf8'));
+          const response = await invitationPage(new Request(`http://${req.headers.host}${req.url}`, {method:req.method}), {store:{get:async key=>records[key] || null}, template});
+          res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+          res.end(await response.text());
+        } catch (error) { next(error); }
+      });
       const api = createApi({
         development: true,
         password: process.env.ADMIN_PASSWORD || loadEnv(mode, process.cwd(), '').ADMIN_PASSWORD || 'wajid-local-only',

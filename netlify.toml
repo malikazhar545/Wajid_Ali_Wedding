@@ -9,6 +9,14 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions.invitation]
+  included_files = ["dist/index.html"]
+
+[[redirects]]
+  from = "/invite/*"
+  to = "/.netlify/functions/invitation?path=:splat"
+  status = 200
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"

@@ -3,6 +3,7 @@ import { ArrowRight, ArrowLeft, ArrowDown, Search, X, Heart, Flower2, Sparkles, 
 import VenueMap from './VenueMap.jsx';
 import Rsvp from './Rsvp.jsx';
 import { confirmedDate, clockTime } from './date-time.mjs';
+import { invitationId, invitationPath, invitationTitle } from './invitation-link.mjs';
 import './wedding.css';
 
 const occasions = {
@@ -120,7 +121,8 @@ function Invitation({id,back}) {
   const heading=useRef(null);
   useEffect(()=>{let active=true;const refresh=()=>get(`/invitation/${encodeURIComponent(id)}`).then(result=>{if(active){setData(result);setError('');}}).catch(err=>{if(active){setError(err.message);if(err.status===404)setData(null);}});refresh();const timer=setInterval(refresh,30000);window.addEventListener('focus',refresh);return()=>{active=false;clearInterval(timer);window.removeEventListener('focus',refresh);};},[id]);
   useEffect(()=>{if(data)heading.current?.focus({preventScroll:true});},[data?.guest.id]);
-  const share=async()=>{const payload={title:`${displayName(data.settings.groom)} — Wedding invitation`,url:`${location.origin}/?invite=${encodeURIComponent(id)}`};try{if(navigator.share){await navigator.share(payload);return;}await navigator.clipboard.writeText(payload.url);setShareStatus('Invitation link copied.');}catch(err){if(err.name!=='AbortError')setShareStatus(`Your invitation link: ${payload.url}`);}};
+  useEffect(()=>{if(!data)return;const previous=document.title;document.title=invitationTitle(data.guest,displayName(data.settings.groom));return()=>{document.title=previous;};},[data?.guest.name,data?.settings.groom]);
+  const share=async()=>{const title=invitationTitle(data.guest,displayName(data.settings.groom));const payload={title,text:title,url:`${location.origin}${invitationPath(data.guest)}`};try{if(navigator.share){await navigator.share(payload);return;}await navigator.clipboard.writeText(payload.url);setShareStatus('Invitation link copied.');}catch(err){if(err.name!=='AbortError')setShareStatus(`Your invitation link: ${payload.url}`);}};
   return <div className="atelier invitation-atelier"><Header invitation back={back}/><main>
     {error&&<p className="w-error" role="alert">{error}</p>}
     {!data ? <div className="w-loading">{error?'Please contact the family for your invitation.':'Opening your invitation…'}</div> : <>
@@ -132,7 +134,7 @@ function Invitation({id,back}) {
   </main><Footer groom={data?.settings.groom}/></div>;
 }
 export default function WeddingExperience() {
-  const route=()=>{const params=new URLSearchParams(location.search);return {invite:params.get('invite'),preview:params.get('preview')};};
+  const route=()=>{const params=new URLSearchParams(location.search);return {invite:invitationId(location.pathname)||params.get('invite'),preview:params.get('preview')};};
   const [current,setCurrent]=useState(route),[data,setData]=useState(null),[error,setError]=useState('');
   const load=()=>{setError('');get('/public').then(setData).catch(err=>{setData(null);setError(err.message);});};
   useEffect(()=>{const pop=()=>setCurrent(route());window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop);},[]);
