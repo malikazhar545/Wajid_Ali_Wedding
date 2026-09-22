@@ -29,7 +29,7 @@ try {
   await page.waitForFunction(()=>[...document.querySelectorAll('.leaflet-tile-loaded')].filter(img=>img.naturalWidth>0).length>=4,{},{timeout:30000});
   await page.locator('.pin-map').click({position:{x:340,y:170}});
   await page.locator('.venue-pin').waitFor();
-  const coordinateInput=page.getByLabel('Google Maps link or coordinates',{exact:true});
+  const coordinateInput=page.getByLabel('Google Maps link, Plus Code or address',{exact:true});
   const beforeDrag=await coordinateInput.inputValue();
   assert.match(beforeDrag,/^-?\d+\.\d+, -?\d+\.\d+$/);
   const marker=await page.locator('.venue-pin').boundingBox();

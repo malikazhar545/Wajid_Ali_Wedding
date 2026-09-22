@@ -1,13 +1,17 @@
 import {googleMapsUrl,parseGooglePin} from '../src/google-pin.mjs';
+import {readPlusCode} from '../src/plus-code.mjs';
+import {shortMapHosts} from '../src/location-selection.mjs';
 
 const fail=message=>Object.assign(new Error(message),{status:400});
 export async function resolveMapPin(value,fetcher=fetch) {
   if(typeof value!=='string'||value.length>4000)throw fail('Paste coordinates or a Google Maps location link.');
   const point=parseGooglePin(value);
   if(point)return point;
+  const plus=readPlusCode(value);
+  if(plus)throw fail(plus.locality?'Use this Plus Code with its town as a Google Maps destination, or copy the full Plus Code for coordinates.':'This short Plus Code needs its town or city. Copy the full line from Google Maps, including the area name.');
   let url=googleMapsUrl(value);
-  if(!url)throw fail('Use a Google Maps link or coordinates such as 31.38136, 74.18635.');
-  if(!['maps.app.goo.gl','goo.gl'].includes(url.hostname))throw fail('This link has no exact pin. Open Google Maps, copy the coordinates of your entrance, and paste them here.');
+  if(!url)throw fail('Paste a Google Maps Share link, a Plus Code with its town, or coordinates such as 31.38136, 74.18635.');
+  if(!shortMapHosts.includes(url.hostname))throw fail('This link has no exact pin. Open Google Maps, copy the coordinates of your entrance, and paste them here.');
   const signal=AbortSignal.timeout(8000);
   for(let hop=0;hop<5;hop++){
     let response;

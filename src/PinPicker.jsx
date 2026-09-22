@@ -4,21 +4,14 @@ import { MapPin, LocateFixed, X, Check } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import GoogleLocationSearch from './GoogleLocationSearch.jsx';
 import GooglePinInput from './GooglePinInput.jsx';
-
-// Area centers guide the map only; the organizer still selects the exact entrance.
-// Sources: https://mapcarta.com/N303543852, https://mapcarta.com/15006890,
-// https://www.latlong.net/place/raiwind-lahore-punjab-pakistan-8336.html
-const areas = {
-  'Bahria Town Lahore': [31.38136,74.18635,14],
-  'Manga Mandi': [31.29913,74.06948,14],
-  Raiwind: [31.245659,74.212891,14],
-};
+import {locationAreas as areas} from './location-areas.mjs';
 const areaBounds = Object.values(areas).map(([lat,lng])=>[lat,lng]);
 
 export default function PinPicker({ event, onChange }) {
   const [open,setOpen] = useState(false);
   const [draft,setDraft] = useState(event.location || null);
   const [draftLink,setDraftLink] = useState('');
+  const [selectionKind,setSelectionKind] = useState('link');
   const [pending,setPending] = useState(false);
   const [inputRevision,setInputRevision] = useState(0);
   const [error,setError] = useState('');
@@ -70,7 +63,7 @@ export default function PinPicker({ event, onChange }) {
     }
   },[open,view]);
 
-  const begin = () => {setDraft(event.location || null);setDraftLink(event.location?'':event.mapUrl||'');setPending(false);setActiveArea('');setView('pin');setGoogleQuery(event.location?`${event.location.lat},${event.location.lng}`:[event.venue,event.address].filter(Boolean).join(', ')||'Bahria Town Lahore');setError('');setTileError('');setOpen(true);};
+  const begin = () => {setDraft(event.location || null);setDraftLink(event.location?'':event.mapUrl||'');setSelectionKind('link');setPending(false);setActiveArea('');setView('google');setGoogleQuery(event.location?`${event.location.lat},${event.location.lng}`:event.mapUrl?'':[event.venue,event.address].filter(Boolean).join(', ')||'Bahria Town Lahore');setError('');setTileError('');setOpen(true);};
   const clearDraft = () => {setDraft(null);setDraftLink('');marker.current?.remove();marker.current=null;};
   const jumpArea = area => {
     const [lat,lng,zoom]=areas[area];
@@ -94,16 +87,16 @@ export default function PinPicker({ event, onChange }) {
     <div className="pin-picker-actions"><button type="button" className="secondary-button" onClick={begin}>{event.location||event.mapUrl?'Adjust location pin':'Choose pin on map'}</button>{(event.location||event.mapUrl) && <button type="button" className="text-button" onClick={()=>onChange({location:null,mapUrl:''})}>Clear pin</button>}</div>
     {event.location && <p className="pin-saved"><Check size={13} aria-hidden="true"/> Exact pin selected for Google Maps</p>}
     {open && <dialog className="map-picker-dialog" ref={dialog} aria-labelledby={'pin-title-'+event.id} onCancel={()=>setOpen(false)}>
-      <div className="map-picker-heading"><div><p className="eyebrow">{event.name.toUpperCase()} VENUE</p><h2 id={'pin-title-'+event.id}>Choose the exact spot.</h2></div><button type="button" className="icon-button" aria-label="Close location picker" onClick={()=>setOpen(false)}><X size={20}/></button></div>
-      <p className="picker-help">Click anywhere on the pin map: the coordinates below fill automatically. You can choose your entrance or a nearby landmark. Your written address stays separate.</p>
+      <div className="map-picker-heading"><div><p className="eyebrow">{event.name.toUpperCase()} VENUE</p><h2 id={'pin-title-'+event.id}>Choose a location.</h2></div><button type="button" className="icon-button" aria-label="Close location picker" onClick={()=>setOpen(false)}><X size={20}/></button></div>
+      <p className="picker-help">Paste a map link, Plus Code, or hall name with its area. Check the location below and save. Your written address stays separate.</p>
+      <GooglePinInput key={inputRevision} point={draft} link={draftLink} onClear={clearDraft} onPending={setPending} onLink={(link,query='',kind='link')=>{clearDraft();setDraftLink(link);setGoogleQuery(query);setSelectionKind(kind);setPending(false);}} onPin={point=>{putPin.current?.(point);map.current?.setView([point.lat,point.lng],17,{animate:false});}}/>
+      <div className="pin-position"><span role="status">{draft?'Pin selected: '+draft.lat.toFixed(6)+', '+draft.lng.toFixed(6):draftLink?(selectionKind==='search'?'Address search ready — check the matching place on Google Maps.':'Map location ready — coordinates are optional.'):pending?'Reading your location…':'Paste a location above to get started.'}</span></div>
       <div className="map-area-shortcuts" role="group" aria-label="Choose a nearby area">{Object.keys(areas).map(area=><button type="button" key={area} aria-pressed={activeArea===area} onClick={()=>jumpArea(area)}>{area}</button>)}</div>
-      <div className="map-picker-toolbar"><button type="button" className="text-button" onClick={()=>{setActiveArea('');setView('pin');map.current?.fitBounds(areaBounds,{padding:[35,35],animate:false});}}>Show all three areas</button><button type="button" className="secondary-button" disabled={locating} onClick={locate}><LocateFixed size={15}/>{locating?'Locating…':'Use my location'}</button></div>
+      <div className="map-picker-toolbar" hidden={view!=='pin'}><button type="button" className="text-button" onClick={()=>{setActiveArea('');setView('pin');map.current?.fitBounds(areaBounds,{padding:[35,35],animate:false});}}>Show all three areas</button><button type="button" className="secondary-button" disabled={locating} onClick={locate}><LocateFixed size={15}/>{locating?'Locating…':'Use my location'}</button></div>
       <div className="map-view-tabs" role="tablist" aria-label="Map view"><button type="button" role="tab" id={`google-tab-${event.id}`} aria-controls={`google-panel-${event.id}`} aria-selected={view==='google'} onClick={()=>setView('google')}>Google Maps & landmarks</button><button type="button" role="tab" id={`pin-tab-${event.id}`} aria-controls={`pin-panel-${event.id}`} aria-selected={view==='pin'} onClick={()=>setView('pin')}>Pin picker</button></div>
-      <div role="tabpanel" id={`google-panel-${event.id}`} aria-labelledby={`google-tab-${event.id}`} hidden={view!=='google'}><GoogleLocationSearch query={googleQuery} area={activeArea} onSearch={setGoogleQuery} onManual={()=>setView('pin')}/></div>
-      <div role="tabpanel" id={`pin-panel-${event.id}`} aria-labelledby={`pin-tab-${event.id}`} hidden={view!=='pin'}><p className="picker-help">Tap the exact spot, then drag the pin to adjust. This pin picker uses OpenStreetMap.</p><div className="pin-map" ref={mapElement} role="region" aria-label="Choose the venue location on the map"/>{tileError&&<p className="map-picker-error" role="alert">{tileError}</p>}</div>
+      <div role="tabpanel" id={`google-panel-${event.id}`} aria-labelledby={`google-tab-${event.id}`} hidden={view!=='google'}><GoogleLocationSearch query={googleQuery} link={draftLink} onManual={()=>setView('pin')}/></div>
+      <div role="tabpanel" id={`pin-panel-${event.id}`} aria-labelledby={`pin-tab-${event.id}`} hidden={view!=='pin'}><p className="picker-help">For an unlisted entrance: click or drag to fill coordinates. This free map has fewer landmarks than Google Maps.</p><div className="pin-map" ref={mapElement} role="region" aria-label="Choose the venue location on the map"/>{tileError&&<p className="map-picker-error" role="alert">{tileError}</p>}<button type="button" className="text-button" onClick={()=>putPin.current?.(map.current.getCenter())}>Place pin at map center</button></div>
       {error && <p className="map-picker-error" role="alert">{error}</p>}
-      <GooglePinInput key={inputRevision} point={draft} link={draftLink} onClear={clearDraft} onPending={setPending} onLink={link=>{clearDraft();setDraftLink(link);setPending(false);}} onPin={point=>{putPin.current?.(point);map.current?.setView([point.lat,point.lng],17,{animate:false});}}/>
-      <div className="pin-position"><span role="status">{draft?draft.lat.toFixed(6)+', '+draft.lng.toFixed(6):draftLink?'Google Maps link selected. Open it to confirm the place.':'No pin selected yet'}</span>{draftLink&&<a className="text-button" href={draftLink} target="_blank" rel="noreferrer">Check selected place</a>}{view==='pin'&&<button type="button" className="text-button" onClick={()=>putPin.current?.(map.current.getCenter())}>Place pin at map center</button>}</div>
       <div className="map-picker-footer"><button type="button" className="secondary-button" onClick={()=>setOpen(false)}>Cancel</button><button type="button" className="primary-button" disabled={pending||(!draft&&!draftLink)} onClick={()=>{onChange({location:draft,mapUrl:draft?'':draftLink});setOpen(false);}}><Check size={17}/> {draftLink?'Use this location':'Use this pin'}</button></div>
     </dialog>}
   </div>;
