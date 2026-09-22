@@ -25,16 +25,16 @@ function Flourish({className=''}) {
   return <svg className={`w-flourish ${className}`} viewBox="0 0 220 35" fill="none" aria-hidden="true"><g stroke="currentColor" strokeWidth=".8"><path d="M3 18h67c18 0 18-13 8-13-13 0-10 23 9 23 14 0 20-10 23-17 3 7 9 17 23 17 19 0 22-23 9-23-10 0-10 13 8 13h67"/><path d="M35 18c11-12 23-9 28-3M42 18c12 10 23 8 28 2M185 18c-11-12-23-9-28-3M178 18c-12 10-23 8-28 2M110 2l4 5-4 5-4-5Z"/><circle cx="110" cy="26" r="2"/></g></svg>;
 }
 function Florals({className=''}) {return <><img className={`w-florals ${className}`} src="/burgundy-florals.webp" alt="" aria-hidden="true"/><span className="w-mobile-florals w-mobile-florals-top" aria-hidden="true"/><span className="w-mobile-florals w-mobile-florals-bottom" aria-hidden="true"/></>;}
-function Header({back}) {
-  return <header className="w-header"><a className="w-brand" href="/" aria-label="Wedding invitation home"><Mark/></a><nav aria-label="Invitation navigation">{back?<button onClick={back} className="w-back" aria-label="Back to guest list"><ArrowLeft size={15}/> Guest list</button>:<a className="w-nav-occasions" href="#occasions">The celebrations</a>}<a className="w-nav-invite" href="#find-invitation">Your invitation <ArrowRight size={14}/></a></nav></header>;
+function Header({back, invitation=false}) {
+  return <header className="w-header"><a className="w-brand" href={invitation?'#find-invitation':'/'} aria-label="Wedding invitation home"><Mark/></a><nav aria-label="Invitation navigation">{back?<button onClick={back} className="w-back" aria-label="Back to guest list"><ArrowLeft size={15}/> Guest list</button>:<a className="w-nav-occasions" href={invitation?'#itinerary-heading':'#occasions'}>The celebrations</a>}<a className="w-nav-invite" href="#find-invitation">Your invitation <ArrowRight size={14}/></a></nav></header>;
 }
 function Footer({groom}) {
-  return <footer className="w-footer"><Mark/><p>With love & duas, from our family to yours.</p><span>{displayName(groom)} <i>·</i> THE WEDDING CELEBRATION</span><a href="/backend"><LockKeyhole size={11}/> Family access</a></footer>;
+  return <footer className="w-footer"><Mark/><p>With love & duas, from our family to yours.</p><span>{displayName(groom)} <i>·</i> THE WEDDING CELEBRATION</span><a href="/family"><LockKeyhole size={11}/> Family access</a></footer>;
 }
 function Opening({guest}) {
   return <div className="envelope-overlay w-opening" role="status"><div className="w-opening-envelope" aria-hidden="true"><div className="w-opening-letter"><Mark/><span>A PERSONAL INVITATION</span></div><div className="w-envelope-front"/><div className="w-envelope-flap"/><div className="w-opening-seal"><Mark/></div></div><p>Especially for {guest.name}</p><span>WITH LOVE, FROM THE FAMILY OF WAJID ALI</span></div>;
 }
-function Home({data,open}) {
+function Home({data,open,onSignOut}) {
   const [query,setQuery]=useState(''),[opening,setOpening]=useState(null),[occasion,setOccasion]=useState('mehndi');
   const timer=useRef(null), search=useRef(null);
   useEffect(()=>()=>clearTimeout(timer.current),[]);
@@ -55,7 +55,7 @@ function Home({data,open}) {
           <div className="w-name-block"><span className="w-overline">THE WEDDING CELEBRATION OF</span><h1 id="wedding-name">{displayName(data.settings.groom)}</h1><Flourish/></div>
           <h2>A cherished beginning.<br/><em>A celebration with you.</em></h2>
           <p className="w-hero-message">With grateful hearts, our family requests the honour of your presence as we celebrate this blessed new chapter.</p>
-          <a href="#find-invitation" className="w-button" onClick={()=>setTimeout(()=>search.current?.focus({preventScroll:true}),450)}>Find your invitation <ArrowRight size={17}/></a>
+          <a href="#find-invitation" className="w-button" onClick={()=>setTimeout(()=>search.current?.focus({preventScroll:true}),450)}>{data.canBrowse?'Browse invitations':'Your personal invitation'} <ArrowRight size={17}/></a>
           <div className="w-signature"><span>With love & duas</span><p>The family of {displayName(data.settings.groom)}</p></div>
         </div>
         <section className="w-stationery" id="find-invitation" aria-labelledby="guest-selection-title">
@@ -65,11 +65,14 @@ function Home({data,open}) {
             <div className="w-paper-inner">
               <Mark/><p className="w-overline">RESERVED WITH LOVE</p>
               <h2 id="guest-selection-title">An invitation,<br/><em>just for you.</em></h2>
-              <p className="w-selection-help">Find your name. Open a little happiness.</p>
+              {data.canBrowse ? <>
+              <p className="w-selection-help">Family view · {data.guests.length} invitations<br/>Find a name. Open their card.</p>
               <label className="w-search"><Search size={17}/><input ref={search} aria-label="Find your name" placeholder="Find your name…" value={query} onChange={e=>setQuery(e.target.value)}/>{query && <button aria-label="Clear search" onClick={()=>setQuery('')}><X size={16}/></button>}</label>
               <div className="w-guest-list" aria-label="Guest invitations">{list.slice(0,25).map((guest,index)=><button key={guest.id} className="w-guest" style={{'--order':Math.min(index,6)}} onClick={()=>select(guest)} disabled={!!opening}><span className="w-guest-initial">{guest.name.trim().charAt(0)}</span><span>{guest.name}{guest.label && <small>{guest.label}</small>}</span><ArrowRight size={16}/></button>)}</div>
               {!list.length && <p className="w-no-guests">{data.guests.length?'No name found. Try another spelling or contact the family.':'Our invitations are being prepared. Please visit again soon.'}</p>}
               {list.length>25 && <p className="w-more-guests">Search above to find your invitation.</p>}
+              <button className="w-family-signout" onClick={onSignOut}>Sign out of family view</button>
+              </> : <div className="w-private-invite"><p className="w-selection-help">Your invitation is waiting at the personal link shared with you by the family.</p><p>Need your link? We would love to help.</p><a className="w-button" href="https://wa.me/923174539300?text=Assalamu%20Alaikum!%20Please%20send%20me%20my%20invitation%20link." target="_blank" rel="noreferrer">Contact the family <ArrowRight size={16}/></a><a className="w-family-access" href="/family"><LockKeyhole size={13}/> Family sign-in to view guest cards</a></div>}
               <p className="w-paper-note"><Heart size={11}/> Your presence would mean so much to us.</p>
             </div>
           </div>
@@ -117,8 +120,8 @@ function Invitation({id,back}) {
   const heading=useRef(null);
   useEffect(()=>{let active=true;const refresh=()=>get(`/invitation/${encodeURIComponent(id)}`).then(result=>{if(active){setData(result);setError('');}}).catch(err=>{if(active){setError(err.message);if(err.status===404)setData(null);}});refresh();const timer=setInterval(refresh,30000);window.addEventListener('focus',refresh);return()=>{active=false;clearInterval(timer);window.removeEventListener('focus',refresh);};},[id]);
   useEffect(()=>{if(data)heading.current?.focus({preventScroll:true});},[data?.guest.id]);
-  const share=async()=>{const payload={title:`${displayName(data.settings.groom)} — Wedding invitation`,url:location.href};try{if(navigator.share){await navigator.share(payload);return;}await navigator.clipboard.writeText(payload.url);setShareStatus('Invitation link copied.');}catch(err){if(err.name!=='AbortError')setShareStatus('Copy this page’s address to share your invitation.');}};
-  return <div className="atelier invitation-atelier"><Header groom={data?.settings.groom} back={back}/><main>
+  const share=async()=>{const payload={title:`${displayName(data.settings.groom)} — Wedding invitation`,url:`${location.origin}/?invite=${encodeURIComponent(id)}`};try{if(navigator.share){await navigator.share(payload);return;}await navigator.clipboard.writeText(payload.url);setShareStatus('Invitation link copied.');}catch(err){if(err.name!=='AbortError')setShareStatus(`Your invitation link: ${payload.url}`);}};
+  return <div className="atelier invitation-atelier"><Header invitation back={back}/><main>
     {error&&<p className="w-error" role="alert">{error}</p>}
     {!data ? <div className="w-loading">{error?'Please contact the family for your invitation.':'Opening your invitation…'}</div> : <>
       <section className="w-invitation-cover" id="find-invitation"><div className="w-folio"><Florals/><div className="w-folio-inner"><p className="w-bismillah" lang="ar" dir="rtl">{BISMILLAH}</p><span className="w-kicker">WITH THE BLESSINGS OF ALLAH</span><Mark/><p className="w-overline">YOU ARE CORDIALLY INVITED TO THE WEDDING OF</p><h1>{displayName(data.settings.groom)}</h1><Flourish/><p className="w-invitation-message">{data.settings.message}</p><div className="w-addressed"><p className="w-overline">A WARM INVITATION FOR</p><h2 ref={heading} tabIndex={-1}>{data.guest.name}</h2>{data.guest.withFamily&&<span className="family-badge"><Users size={14}/> Together with your family</span>}<p>We would be delighted to welcome you to<br/><strong>{data.settings.events.map(event=>event.name).join(', ').replace(/, ([^,]*)$/,' & $1')}</strong>.</p></div><span className="w-folio-host">{data.settings.host}</span></div></div></section>
@@ -129,11 +132,21 @@ function Invitation({id,back}) {
   </main><Footer groom={data?.settings.groom}/></div>;
 }
 export default function WeddingExperience() {
-  const [id,setId]=useState(new URLSearchParams(location.search).get('invite')),[data,setData]=useState(null),[error,setError]=useState('');
-  const load=()=>{setError('');get('/public').then(setData).catch(err=>setError(err.message));};
-  useEffect(()=>{load();const pop=()=>setId(new URLSearchParams(location.search).get('invite'));window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop);},[]);
-  const navigate=next=>{history.pushState({},'',next?`/?invite=${encodeURIComponent(next)}`:'/');setId(next);window.scrollTo({top:0,behavior:'instant'});if(!next)load();};
-  if(id)return <Invitation key={id} id={id} back={()=>navigate(null)}/>;
+  const route=()=>{const params=new URLSearchParams(location.search);return {invite:params.get('invite'),preview:params.get('preview')};};
+  const [current,setCurrent]=useState(route),[data,setData]=useState(null),[error,setError]=useState('');
+  const load=()=>{setError('');get('/public').then(setData).catch(err=>{setData(null);setError(err.message);});};
+  useEffect(()=>{const pop=()=>setCurrent(route());window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop);},[]);
+  useEffect(()=>{
+    if(current.invite){setData(null);return;}
+    let active=true;
+    const refresh=()=>get('/public').then(result=>{if(active){setData(result);setError('');}}).catch(err=>{if(active){setData(null);setError(err.message);}});
+    refresh();const timer=setInterval(refresh,30000);window.addEventListener('focus',refresh);
+    return()=>{active=false;clearInterval(timer);window.removeEventListener('focus',refresh);};
+  },[current.invite,current.preview]);
+  const navigate=next=>{history.pushState({},'',next?`/?preview=${encodeURIComponent(next)}`:'/');setData(null);setCurrent(route());window.scrollTo({top:0,behavior:'instant'});};
+  const signOut=async()=>{try{const response=await fetch('/api/logout',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});if(!response.ok)throw new Error('Could not sign out. Please try again.');setData(null);navigate(null);load();}catch(err){setError(err.message);}};
+  if(current.invite)return <Invitation key={current.invite} id={current.invite}/>;
   if(!data)return <div className="atelier"><Header/><main className="w-loading"><Mark/><p>{error||'Preparing your invitation…'}</p>{error&&<button className="w-button" onClick={load}>Try again</button>}</main></div>;
-  return <Home data={data} open={navigate}/>;
+  if(current.preview && data.canBrowse)return <Invitation key={current.preview} id={current.preview} back={()=>navigate(null)}/>;
+  return <>{error&&<p className="w-error" role="alert">{error}</p>}<Home data={data} open={navigate} onSignOut={signOut}/></>;
 }

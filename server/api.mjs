@@ -81,9 +81,10 @@ export function createApi({ store, password, username = 'ma9440863', development
         closing: saved.closing === 'Your presence is our most cherished gift.' ? defaultSettings.closing : saved.closing,
       };
       if (path === '/public' && method === 'GET') {
-        const guests = await store.guests();
+        const canBrowse = !!password && authenticated(request, sessionSecret);
+        const guests = canBrowse ? await store.guests() : [];
         const { events, ...publicSettings } = settings;
-        return json({ settings: publicSettings, development, guests: guests.map(({ id, name, label }) => ({ id, name, label })).sort((a, b) => a.name.localeCompare(b.name)) });
+        return json({ settings: publicSettings, canBrowse, guests: guests.map(({ id, name, label }) => ({ id, name, label })).sort((a, b) => a.name.localeCompare(b.name)) }, 200, { Vary: 'Cookie' });
       }
       const rsvpMatch = path.match(/^\/invitation\/([a-zA-Z0-9-]{1,80})\/rsvp$/);
       if (rsvpMatch && method === 'PUT') {

@@ -20,6 +20,15 @@ let createdId;
 let originalSettings;
 try {
   await page.goto(base);
+  await page.getByRole('link',{name:'Family sign-in to view guest cards'}).waitFor();
+  assert.equal(await page.getByRole('textbox',{name:'Find your name'}).count(),0);
+  assert.equal(await page.locator('.w-guest').count(),0);
+  const publicData=await (await page.request.get(base+'/api/public')).json();
+  assert.deepEqual(publicData.guests,[]);assert.equal(publicData.canBrowse,false);
+  await page.getByRole('link',{name:'Family sign-in to view guest cards'}).click();
+  await page.getByLabel('Username',{exact:true}).fill('test-organizer');
+  await page.getByLabel('Password',{exact:true}).fill('isolated-test-password');
+  await page.getByRole('button',{name:'View guest invitations',exact:true}).click();
   await page.getByRole('button', { name: 'Ahmed Ali' }).waitFor();
   await page.evaluate(() => document.fonts.ready);
   await page.getByRole('heading', {name:'Wajid Ali',exact:true}).waitFor();
@@ -57,6 +66,7 @@ try {
   await page.getByText('No name found.', { exact: false }).waitFor();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(`${base}/backend`);
+  await page.getByRole('button',{name:'Sign out'}).click();
   await page.getByLabel('Username', { exact: true }).fill('test-organizer');
   await page.getByLabel('Password', { exact: true }).fill('isolated-test-password');
   await page.screenshot({ path: 'test-results/backend-login.png', fullPage: true });
@@ -73,6 +83,11 @@ try {
   await page.getByRole('button', { name: 'Edit QA Wedding Guest' }).waitFor();
   const admin = await (await page.request.get(`${base}/api/admin`)).json();
   createdId = admin.guests.find(g => g.name === 'QA Wedding Guest').id;
+  const shareField=page.getByRole('textbox',{name:'Invitation link for QA Wedding Guest'});
+  assert.equal(await shareField.inputValue(),base+'/?invite='+createdId);
+  await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copiedInvitation=text;}},configurable:true});});
+  await page.getByRole('button',{name:'Copy link for QA Wedding Guest',exact:true}).click();
+  assert.equal(await page.evaluate(()=>window.copiedInvitation),base+'/?invite='+createdId);
   await page.getByRole('tab', { name: 'Dates & venues' }).click();
   await page.locator('.event-settings-grid .settings-panel').first().getByLabel(/^Date/).fill('2026-12-17');
   await page.locator('.event-settings-grid .settings-panel').first().getByLabel('Venue', { exact:true }).fill('Royal Marquee');
@@ -108,8 +123,15 @@ try {
   await page.getByText('Details saved. Guest cards will update automatically.').waitFor();
   await page.screenshot({ path: 'test-results/settings-desktop.png', fullPage: true });
   const invitationPage = await browser.newPage({ viewport: { width: 375, height: 812 } });
-  await invitationPage.goto(`${base}/?invite=${createdId}`);
+  const guestRequests=[];
+  invitationPage.on('request',request=>{if(request.url().includes('/api/'))guestRequests.push(request.url());});
+  await invitationPage.goto(base+'/?invite='+createdId);
   await invitationPage.getByRole('heading', { name: 'QA Wedding Guest' }).waitFor();
+  assert.equal(await invitationPage.getByRole('button',{name:'Back to guest list'}).count(),0);
+  assert.equal(await invitationPage.getByRole('textbox',{name:'Find your name'}).count(),0);
+  assert(!guestRequests.some(url=>url.includes('/api/public')||url.includes('/api/admin')));
+  const privateDirectory=await (await invitationPage.request.get(base+'/api/public')).json();
+  assert.deepEqual(privateDirectory.guests,[]);
   const whatsapp=invitationPage.getByRole('link',{name:'Contact family on WhatsApp'});
   assert.equal(new URL(await whatsapp.getAttribute('href')).pathname,'/923174539300');
   await invitationPage.getByRole('radio',{name:'Joyfully accepts'}).check();
@@ -194,7 +216,10 @@ try {
   await page.getByLabel('Username', { exact:true }).waitFor();
   assert.equal((await page.request.get(`${base}/api/admin`)).status(),401);
   const motionPage = await browser.newPage({ viewport:{ width:375,height:812 }, reducedMotion:'no-preference' });
-  await motionPage.goto(base);
+  await motionPage.goto(base+'/family');
+  await motionPage.getByLabel('Username',{exact:true}).fill('test-organizer');
+  await motionPage.getByLabel('Password',{exact:true}).fill('isolated-test-password');
+  await motionPage.getByRole('button',{name:'View guest invitations',exact:true}).click();
   await motionPage.getByRole('button', { name:'Ahmed Ali' }).click();
   await motionPage.locator('.envelope-overlay').waitFor();
   await motionPage.getByRole('heading', { name:'Ahmed Ali' }).waitFor();
@@ -205,6 +230,19 @@ try {
     await motionPage.getByRole('button', { name:'Ahmed Ali' }).waitFor();
     assert(await motionPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Home overflow at ${viewport.width}px`);
   }
+  await motionPage.getByRole('button',{name:'Sign out of family view'}).click();
+  await motionPage.getByRole('link',{name:'Family sign-in to view guest cards'}).waitFor();
+  assert.equal(await motionPage.locator('.w-guest').count(),0);
+  await invitationPage.goto(base+'/?preview='+createdId);
+  await invitationPage.getByRole('link',{name:'Family sign-in to view guest cards'}).waitFor();
+  assert.equal(await invitationPage.locator('.w-guest').count(),0);
+  await invitationPage.goto(base+'/?invite=missing-invitation');
+  await invitationPage.getByRole('alert').waitFor();
+  assert.equal(await invitationPage.locator('.w-guest').count(),0);
+  await invitationPage.goto(base);
+  await invitationPage.getByRole('link',{name:'Family sign-in to view guest cards'}).waitFor();
+  await invitationPage.screenshot({path:'test-results/private-home-mobile.png',fullPage:true});
+  assert(await invitationPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.deepEqual(errors, []);
   console.log('PASS: /backend login, guest CRUD, family options, dates, venue/address, map pin, Google directions, share location, open-card refresh, responsive layouts, envelope animation, logout.');
 } catch(error) {

@@ -40,7 +40,8 @@ test('guest RSVP persists, updates, appears in admin and survives organizer edit
   assert.deepEqual(card.guest.rsvp,rsvp);assert.equal(card.guest.name,guest.name);assert.deepEqual(card.guest.events,['baraat']);
   assert.equal((await (await f.request(`/invitation/${other.id}`)).json()).guest.rsvp,null);
   const directory=await (await f.request('/public')).json();
-  assert(directory.guests.every(item=>!('rsvp' in item)));
+  assert.deepEqual(directory.guests,[]);
+  assert.equal(directory.canBrowse,false);
   await f.login();
   const admin=await (await f.request('/admin')).json();
   assert.deepEqual(admin.guests.find(item=>item.id===g.id).rsvp,rsvp);
@@ -152,4 +153,32 @@ test('cross-origin mutations denied; logout expires session; short production pa
   const logout=await f.request('/logout','POST',{});assert.match(logout.headers.get('set-cookie'),/Max-Age=0/);
   f.setCookie('');assert.equal((await f.request('/admin')).status,401);
   const insecure=fixture({password:'short'});assert.equal((await insecure.request('/login','POST',{password:'short'})).status,503);
+});
+
+
+test('guest directory is available only to signed-in family; personal cards disclose no other guests',async()=>{
+  const f=fixture();await f.login();
+  const first=await (await f.request('/admin/guests','POST',guest)).json();
+  const other=await (await f.request('/admin/guests','POST',{...guest,name:'Private other guest',label:'Private label'})).json();
+  const familyResponse=await f.request('/public');
+  assert.equal(familyResponse.headers.get('cache-control'),'no-store');
+  assert.equal(familyResponse.headers.get('vary'),'Cookie');
+  const family=await familyResponse.json();
+  assert.equal(family.canBrowse,true);assert.equal(family.guests.length,2);
+  assert(family.guests.some(g=>g.id===other.id));
+  for(const cookie of ['', 'wajid_session=9999999999999.forged', 'wajid_session=1.expired']) {
+    f.setCookie(cookie);
+    const response=await f.request('/public');
+    const data=await response.json();
+    assert.equal(data.canBrowse,false);assert.deepEqual(data.guests,[]);
+    assert.equal(data.settings.events,undefined);
+    assert(!JSON.stringify(data).includes(other.name));assert(!JSON.stringify(data).includes(other.id));
+    assert.equal((await f.request('/admin')).status,401);
+  }
+  const card=await (await f.request('/invitation/'+first.id)).json();
+  assert.equal(card.guest.name,guest.name);
+  assert(!JSON.stringify(card).includes(other.name));assert(!JSON.stringify(card).includes(other.id));
+  assert.equal((await f.request('/invitation/not-a-real-invitation')).status,404);
+  const same=await (await f.request('/public?search=Private&admin=true')).json();
+  assert.deepEqual(same.guests,[]);
 });
